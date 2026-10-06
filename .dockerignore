@@ -1,0 +1,7 @@
+**/target
+.git
+.hallmark
+gates
+demo/contracts
+*.md
+!README.md

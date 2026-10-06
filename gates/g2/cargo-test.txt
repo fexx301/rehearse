@@ -1,0 +1,30 @@
+     Running unittests src/lib.rs (target/debug/deps/rehearse_demo_token_v1-23a604299560c1de)
+test test::unknown_holder_has_zero_balance ... ok
+test test::metadata_is_set_by_constructor ... ok
+test test::non_positive_amounts_are_rejected ... ok
+test test::mint_without_admin_auth_fails - should panic ... ok
+test test::upgrade_without_admin_auth_fails - should panic ... ok
+test test::mint_credits_holder_and_requires_admin ... ok
+test test::transfer_over_balance_fails ... ok
+test test::transfer_moves_balance_and_requires_sender ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+     Running unittests src/lib.rs (target/debug/deps/rehearse_demo_token_v2_broken-d1998a4ff506359c)
+test test::unknown_holder_has_zero_balance ... ok
+test test::metadata_is_set_by_constructor ... ok
+test test::non_positive_amounts_are_rejected ... ok
+test test::upgrade_without_admin_auth_fails - should panic ... ok
+test test::mint_without_admin_auth_fails - should panic ... ok
+test test::mint_credits_holder_and_requires_admin ... ok
+test test::transfer_over_balance_fails ... ok
+test test::transfer_moves_balance_and_requires_sender ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+     Running unittests src/lib.rs (target/debug/deps/rehearse_demo_token_v2_compatible-fa602a7eaf8c87f8)
+test test::unknown_holder_has_zero_balance ... ok
+test test::metadata_is_set_by_constructor ... ok
+test test::mint_without_admin_auth_fails - should panic ... ok
+test test::non_positive_amounts_are_rejected ... ok
+test test::mint_credits_holder_and_requires_admin ... ok
+test test::upgrade_without_admin_auth_fails - should panic ... ok
+test test::transfer_over_balance_fails ... ok
+test test::transfer_moves_balance_and_requires_sender ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s

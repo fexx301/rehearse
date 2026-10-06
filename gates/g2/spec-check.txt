@@ -1,0 +1,4 @@
+same  spec_sha256=b55fdb75f6d79ec527479508776afd44e84f512e59f038814cd53d626694755a  spec_bytes=544  wasm_sha256=d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5  demo/wasm/token-v1.wasm
+same  spec_sha256=b55fdb75f6d79ec527479508776afd44e84f512e59f038814cd53d626694755a  spec_bytes=544  wasm_sha256=fffa63ee841f893896d5428a873ed6be5f8994327936389fc5e788d11fa7ecb0  demo/wasm/token-v2-broken.wasm
+same  spec_sha256=b55fdb75f6d79ec527479508776afd44e84f512e59f038814cd53d626694755a  spec_bytes=544  wasm_sha256=fe2fef8246ad2104f58b88299c48c1d89f75714257fec49062cc59452525d879  demo/wasm/token-v2-compatible.wasm
+RESULT: spec byte-identical

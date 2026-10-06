@@ -1,0 +1,9 @@
+🔍 Soroban Upgrade Safeguard
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Loading and Parsing contracts...
+Error: Failed to decode contractspecv0 section 0 at byte offset 2620
+
+Caused by:
+    Unsupported interface version: no decoder supports protocol 28; registered decoders: ['legacy-no-version' (no version (legacy)), 'soroban-v0-protocol-20-23' (protocol 20–23)]; upgrade the tool to a version that understands this protocol (section declared protocol 28)
+exit=1
