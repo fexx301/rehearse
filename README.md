@@ -25,11 +25,11 @@ The broken build gets past the checks most teams run before an upgrade. Its test
 
 One caveat: the variant names still appear as plain strings in the Wasm data section. The rename is invisible to a spec diff, not to every possible static check.
 
-Open [`demo/report.html`](demo/report.html) to see the full report.
+See the full report live at **[fexx301.github.io/rehearse/demo/report.html](https://fexx301.github.io/rehearse/demo/report.html)** (the same file as [`demo/report.html`](demo/report.html)).
 
 ## On a contract we didn't write
 
-[`examples/blend-pool`](examples/blend-pool) runs Rehearse read-only against Blend's testnet lending pool, a production protocol built with soroban-sdk 22. Its deployed code is byte-identical to Blend's published v2.0.0 release. Two builds from Blend's own history were replayed as candidates: v2.0.0 rebuilt from source, and the commit before their flash-loan fix. All five pool reads were identical across all three versions, with nothing read outside the capture. The offline baseline also matched the live network, except for interest that accrues with time. That example is also why the comparison is narrow: the fix only touches flash loans, which those reads never exercise.
+[`examples/blend-pool`](examples/blend-pool) ([live report](https://fexx301.github.io/rehearse/examples/blend-pool/report.html)) runs Rehearse read-only against Blend's testnet lending pool, a production protocol built with soroban-sdk 22. Its deployed code is byte-identical to Blend's published v2.0.0 release. Two builds from Blend's own history were replayed as candidates: v2.0.0 rebuilt from source, and the commit before their flash-loan fix. All five pool reads were identical across all three versions, with nothing read outside the capture. The offline baseline also matched the live network, except for interest that accrues with time. That example is also why the comparison is narrow: the fix only touches flash loans, which those reads never exercise.
 
 ## Reproduce it
 
