@@ -3,7 +3,8 @@
 # The proposed Wasm lives at demo/upgrade/candidate.wasm. Rehearse replays the manifest
 # against the committed testnet capture, once on the deployed code and once on the
 # candidate, and fails the check if any result or storage entry differs.
-# Copy this file into your own repo and point it at your manifest, capture and build.
+# It builds the CLI from source so it also checks this repo's code. In your own repo,
+# use the action instead: `uses: fexx301/rehearse@v0.1.0` (see the README).
 name: upgrade check
 
 on:

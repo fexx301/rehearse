@@ -33,3 +33,23 @@ jobs:
           code=$?
           set -e
           test "$code" -eq 2 || { echo "expected exit 2 for a diverging candidate, got $code"; exit 1; }
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The published action, as the README shows it
+        id: check
+        uses: fexx301/rehearse@v0.1.0
+        with:
+          manifest: demo/manifest.json
+          capture: demo/capture
+          candidates: |
+            v2-compatible=demo/wasm/token-v2-compatible.wasm
+            v2-broken=demo/wasm/token-v2-broken.wasm
+          fail-on-divergence: 'false'
+      - name: It used the release and caught the broken upgrade
+        run: |
+          test "${{ steps.check.outputs.installed-from }}" = release
+          test "${{ steps.check.outputs.exit-code }}" = 2
+          test "${{ steps.check.outputs.diverged }}" = true

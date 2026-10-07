@@ -152,3 +152,23 @@ fn a_manifest_for_another_contract_names_both() {
     assert_eq!(code, Some(1));
     assert!(err.contains(other["contract"].as_str().unwrap()) && err.contains("capture again"), "{err}");
 }
+
+#[test]
+fn signatures_are_checked_through_the_upgrade_path() {
+    for (candidate, code, finding) in [("v2-compatible", 0, None), ("v2-authscope", 2, Some("rejected"))] {
+        let report = std::env::temp_dir().join(format!("rehearse-cli-{}-upsig-{candidate}.json", std::process::id()));
+        let out = bin()
+            .args(["replay", "--manifest"]).arg(repo("examples/upgrade-path/manifest.json"))
+            .arg("--capture").arg(repo("examples/upgrade-path/capture"))
+            .arg("--candidate").arg(format!("{candidate}={}", repo(&format!("demo/wasm/token-{candidate}.wasm")).display()))
+            .arg("--out").arg(&report)
+            .args(["--check-signatures", "--fail-on-divergence"])
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(code), "{candidate}");
+        let r: serde_json::Value = serde_json::from_slice(&std::fs::read(&report).unwrap()).unwrap();
+        assert_eq!(r["signature_check"]["deployed_contract"], "accepted its own signed requests");
+        assert_eq!(r["candidates"][0]["installed_via_upgrade"]["candidate_code_installed"], true);
+        assert_eq!(r["candidates"][0]["signature_differences"][0]["finding"].as_str(), finding, "{candidate}");
+    }
+}
