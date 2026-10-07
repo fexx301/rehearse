@@ -715,6 +715,27 @@ mod tests {
     }
 
     #[test]
+    fn a_candidate_that_adds_an_authorization_is_a_new_requirement() {
+        // Roles reversed: the insecure no-auth build plays the deployed contract, so its
+        // transfer requires nothing; v1 then requires an authorization it never asked for.
+        let manifest = Manifest::load(&demo("manifest.json")).unwrap();
+        let real = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();
+        let contract = ScAddress::from_str(&manifest.contract).unwrap();
+        let noauth = std::fs::read(demo("wasm/token-v2-noauth.wasm")).unwrap();
+        let snap = with_candidate(&real, &contract, &noauth).unwrap();
+        let base = run(snap.clone(), &manifest, "baseline").unwrap();
+        assert!(base.steps[4].payloads.is_empty(), "the stand-in deployed contract requires nothing");
+        let v1 = std::fs::read(demo("wasm/token-v1.wasm")).unwrap();
+        let rec = candidate(&snap, &manifest, "v1", &v1).unwrap();
+        let captured = snap.ledger_entries.iter().map(|(k, _)| key_id(k)).collect();
+        let check = signed_check(&snap, &manifest, &base, &[(&rec, v1.as_slice())], &captured).unwrap();
+        assert!(check.unavailable.is_none(), "{:?}", check.unavailable);
+        let f = &check.candidates[0].findings;
+        assert_eq!(f.len(), 1);
+        assert_eq!((f[0].step, f[0].kind), (5, "new requirement"));
+    }
+
+    #[test]
     fn the_check_is_unavailable_when_the_deployed_contract_rejects_its_own_requests() {
         let manifest = Manifest::load(&demo("manifest.json")).unwrap();
         let snap = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();

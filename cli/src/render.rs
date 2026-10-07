@@ -692,7 +692,7 @@ pub fn render(report: &Value) -> String {
                 } else {
                     let items: Vec<String> = diffs.iter().map(|d| {
                         let what = if s(d, "finding") == "new requirement" { "requires an authorization the deployed contract didn't" } else { "rejected" };
-                        format!("<li>{what} at call {}: {}</li>", d["step"], esc(&sentence(s(d, "label"))))
+                        format!("<li>{what} at call {}: {}<br><span class=\"none\">{}</span></li>", d["step"], esc(&sentence(s(d, "label"))), esc(s(d, "candidate").trim_start_matches("error: ")))
                     }).collect();
                     (format!("<ul>{}</ul>", items.join("")), " class=\"diff\"")
                 };
