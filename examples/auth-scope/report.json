@@ -130,6 +130,14 @@
       "label": "v2-authscope",
       "reads_absent_on_chain": [],
       "reads_outside_capture": [],
+      "signature_differences": [
+        {
+          "candidate": "error: Error(Context, InvalidAction)",
+          "finding": "rejected",
+          "label": "A sends 100 RHD to B",
+          "step": 3
+        }
+      ],
       "state_differences": [],
       "status": "diverged",
       "step_differences": [],
@@ -183,6 +191,74 @@
         }
       ],
       "wasm_sha256": "a288e69321d6b63ebe019383099c32ccd51dcf1332e4329e6d974379839d3c94"
+    },
+    {
+      "auth_differences": [
+        {
+          "baseline": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 authorizes CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI.transfer(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3, GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI, 1000000000)"
+          ],
+          "candidate": [],
+          "label": "A sends 100 RHD to B",
+          "step": 3
+        }
+      ],
+      "label": "v2-noauth",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "diverged",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance",
+          "result": "12400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance",
+          "result": "5000000000"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+            "1000000000"
+          ],
+          "call": "transfer",
+          "failed": false,
+          "label": "A sends 100 RHD to B",
+          "result": "()"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance after",
+          "result": "11400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance after",
+          "result": "6000000000"
+        }
+      ],
+      "wasm_sha256": "df415048feff1facb9b58eeb839d1bc7e538ba524cdd58869ef392466b5f68c8"
     }
   ],
   "capture": {
@@ -197,13 +273,13 @@
     "keys_verified_absent": [
       "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
       "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
-      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 8505573377549415299 })"
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 7645659887705306226 })"
     ],
-    "ledger": 5070573,
-    "ledger_close_time": 1791376452,
+    "ledger": 5071086,
+    "ledger_close_time": 1791379017,
     "network": "testnet",
     "protocol": 29,
-    "snapshot_sha256": "9fa8bd31c4c415f83cd121593039ea6881db57858bbee87883fe57ea2b1a2d23"
+    "snapshot_sha256": "8341870ba3d23d96a875181ac9a6ad6fd0418fbb811761e03d6bef8924d224fe"
   },
   "claim": "Observed differences for the listed calls on the captured state. Not a safety certification.",
   "manifest": {
@@ -283,6 +359,13 @@
     "soroban_env_host": "28.0.2 with experimental `next` feature",
     "soroban_sdk": "28.0.0"
   },
+  "signature_check": {
+    "deployed_contract": "accepted its own signed requests",
+    "method": "Each ordinary account that has to authorize is given a test signer in a copy of the captured state. The deployed contract's own authorization requests are signed with those keys, and every version replays with signature checking on.",
+    "scope": "Shows whether authorizations signed for the deployed contract still work on each candidate. It does not show that a candidate checks authorization at all: a candidate that drops a requirement still passes here, and appears under auth_differences instead. Contract (smart-wallet) accounts are not checked.",
+    "test_signer_accounts": 1,
+    "unchecked_calls": []
+  },
   "summary": [
     {
       "candidate": "v2-compatible",
@@ -293,6 +376,14 @@
     {
       "auth_differences": 1,
       "candidate": "v2-authscope",
+      "signature_differences": 1,
+      "state_differences": 0,
+      "status": "diverged",
+      "step_differences": 0
+    },
+    {
+      "auth_differences": 1,
+      "candidate": "v2-noauth",
       "state_differences": 0,
       "status": "diverged",
       "step_differences": 0

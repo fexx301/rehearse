@@ -54,6 +54,20 @@ pub struct StepResult {
     pub auths: Vec<String>,
     /// Contract events this call emitted, in order.
     pub events: Vec<String>,
+    /// The exact authorization payloads this call required (mocked runs only).
+    pub payloads: Vec<crate::signing::Payload>,
+    /// Signed runs only: false when the call fell back to mocking (a contract account had to
+    /// authorize), so its signatures were not checked.
+    pub signature_checked: Option<bool>,
+}
+
+/// How authorization is handled in a run.
+pub enum Auth<'a> {
+    /// Every require_auth is satisfied; what each call requires is recorded.
+    Mocked,
+    /// Checking on: each workflow call gets the deployed contract's own requests for that
+    /// call, signed with test keys (see `signing`).
+    Signed(&'a [Vec<crate::signing::Payload>]),
 }
 
 fn val_str(env: &Env, v: &Val) -> String {
@@ -247,18 +261,27 @@ fn describe_contract_error(code: u32, names: &BTreeMap<u32, String>) -> String {
 
 /// Run every manifest step, in order, in one Env built from `snap`.
 pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Branch, String> {
-    run_inner(snap, manifest, label, None)
+    run_inner(snap, manifest, label, None, Auth::Mocked)
 }
 
 /// Run a candidate. By default its code is swapped in directly; when the manifest has an
 /// `upgrade` block, the code is only installed and the contract's own upgrade function
 /// (then any migrate calls) puts it in place before the workflow runs.
 pub fn candidate(snap: &LedgerSnapshot, manifest: &Manifest, label: &str, wasm: &[u8]) -> Result<Branch, String> {
+    candidate_with(snap, manifest, label, wasm, Auth::Mocked)
+}
+
+pub fn candidate_with(snap: &LedgerSnapshot, manifest: &Manifest, label: &str, wasm: &[u8], auth: Auth) -> Result<Branch, String> {
     let contract = ScAddress::from_str(&manifest.contract).map_err(|e| format!("bad contract address: {e}"))?;
     match &manifest.upgrade {
-        None => run_inner(with_candidate(snap, &contract, wasm)?, manifest, label, None),
-        Some(_) => run_inner(install_code(snap, &contract, wasm)?, manifest, label, Some(wasm)),
+        None => run_inner(with_candidate(snap, &contract, wasm)?, manifest, label, None, auth),
+        Some(_) => run_inner(install_code(snap, &contract, wasm)?, manifest, label, Some(wasm), auth),
     }
+}
+
+/// The deployed code with checking on, against its own signed requests.
+pub fn run_signed(snap: LedgerSnapshot, manifest: &Manifest, payloads: &[Vec<crate::signing::Payload>]) -> Result<Branch, String> {
+    run_inner(snap, manifest, "baseline (signed)", None, Auth::Signed(payloads))
 }
 
 /// A copy of `snap` with `wasm` installed as a code entry (TTL of the contract instance), but
@@ -289,7 +312,7 @@ pub fn install_code(snap: &LedgerSnapshot, contract: &ScAddress, wasm: &[u8]) ->
     Ok(out)
 }
 
-fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade: Option<&[u8]>) -> Result<Branch, String> {
+fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade: Option<&[u8]>, auth: Auth) -> Result<Branch, String> {
     let contract = ScAddress::from_str(&manifest.contract)
         .map_err(|e| format!("bad contract address: {e}"))?;
     let wasm = match via_upgrade {
@@ -305,8 +328,10 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
         ledger_info: Some(snap.ledger_info()),
         snapshot: Some(snap.clone()),
     });
-    // Signatures are not reproduced offline; every require_auth is satisfied.
+    // Mocked: every require_auth is satisfied. Signed runs switch per call below; setup calls
+    // (upgrade, migrate) stay mocked because they are not part of the compared workflow.
     env.mock_all_auths();
+    let signed_snap = snap.clone();
     let target = Address::from_str(&env, &manifest.contract);
 
     let invoke = |label: &str, call: &str, args: &[crate::manifest::Arg]| -> Result<StepResult, String> {
@@ -330,6 +355,7 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
             Ok(Err(Ok(err))) if err.is_type(ScErrorType::Contract) => {
                 (describe_contract_error(err.get_code(), &names), true)
             }
+            Ok(Err(Ok(err))) if err.is_type(ScErrorType::Auth) => (format!("error: authorization rejected ({err:?})"), true),
             Ok(Err(Ok(err))) => (format!("error: {err:?}"), true),
             Ok(Err(Err(InvokeError::Contract(code)))) => (describe_contract_error(code, &names), true),
             Ok(Err(Err(InvokeError::Abort))) => ("error: aborted".into(), true),
@@ -344,6 +370,15 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
         // The host's event buffer may accumulate across calls; keep only what this call added.
         let after: Vec<soroban_sdk::xdr::ContractEvent> = env.events().all().events().to_vec();
         let new_events = if after.starts_with(&events_before) { &after[events_before.len()..] } else { &after[..] };
+        // The exact payloads behind `auths`, for signing in a later signed run. Only meaningful
+        // while mocking (recording); the host keeps them for the most recent call.
+        let payloads: Vec<crate::signing::Payload> = env
+            .host()
+            .get_recorded_auth_payloads()
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|p| p.address.map(|a| (a, p.invocation)))
+            .collect();
         Ok(StepResult {
             label: label.into(),
             call: call.into(),
@@ -352,6 +387,8 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
             failed,
             auths,
             events: new_events.iter().map(event_str).collect(),
+            payloads,
+            signature_checked: None,
         })
     };
 
@@ -372,8 +409,26 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
     }
 
     let mut steps = Vec::new();
-    for step in &manifest.steps {
-        steps.push(invoke(&step.label, &step.call, &step.args)?);
+    for (i, step) in manifest.steps.iter().enumerate() {
+        let checked = match &auth {
+            Auth::Mocked => None,
+            Auth::Signed(all) => {
+                let p = all.get(i).map(Vec::as_slice).unwrap_or(&[]);
+                if crate::signing::all_plain_accounts(p) {
+                    env.set_auths(&crate::signing::sign(&signed_snap, i, p));
+                    Some(true)
+                } else {
+                    env.mock_all_auths();
+                    Some(false)
+                }
+            }
+        };
+        let mut r = invoke(&step.label, &step.call, &step.args)?;
+        if checked.is_some() {
+            r.payloads.clear();
+            r.signature_checked = checked;
+        }
+        steps.push(r);
     }
 
     let mut final_state = BTreeMap::new();
@@ -394,6 +449,89 @@ fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade
     }
     let misses = source.misses.borrow().clone();
     Ok(Branch { label: label.into(), wasm_sha256: sha256_hex(&wasm), steps, final_state, misses, upgrade, migrate, installed })
+}
+
+/// Result of `--check-signatures` for one candidate.
+pub struct SignedFinding {
+    pub step: usize,
+    pub label: String,
+    /// "rejected": signatures made for the deployed contract are refused by the candidate.
+    /// "new requirement": the candidate requires an authorization the deployed contract didn't.
+    pub kind: &'static str,
+    pub detail: String,
+}
+
+pub struct SignedCandidate {
+    pub label: String,
+    pub findings: Vec<SignedFinding>,
+    /// Workflow calls whose signatures were not checked (a contract account had to authorize).
+    pub unchecked: Vec<String>,
+    /// Keys the signed run read outside the capture, other than nonces and the test-signer accounts.
+    pub outside: Vec<LedgerKey>,
+}
+
+pub struct SignedCheck {
+    /// None when the check ran; otherwise why it could not.
+    pub unavailable: Option<String>,
+    pub accounts: usize,
+    pub unchecked: Vec<String>,
+    pub candidates: Vec<SignedCandidate>,
+}
+
+fn synthetic(k: &LedgerKey, touched: &std::collections::BTreeSet<LedgerKey>) -> bool {
+    touched.contains(k) || matches!(k, LedgerKey::ContractData(d) if matches!(d.key, ScVal::LedgerKeyNonce(_)))
+}
+
+/// Sign the deployed contract's own requests with test keys, check the deployed contract
+/// accepts them (otherwise the check is unavailable), then replay each candidate with
+/// checking on. Answers "do signatures made for the deployed contract still work on this
+/// candidate?". A candidate that drops a requirement still passes here; the
+/// required-authorization comparison is what flags that.
+pub fn signed_check(
+    snap: &LedgerSnapshot,
+    manifest: &Manifest,
+    baseline: &Branch,
+    candidates: &[(&Branch, &[u8])],
+    captured: &std::collections::BTreeSet<String>,
+) -> Result<SignedCheck, String> {
+    let payloads: Vec<Vec<crate::signing::Payload>> = baseline.steps.iter().map(|s| s.payloads.clone()).collect();
+    let (signed_snap, touched) = crate::signing::with_test_signers(snap, &payloads);
+    let base = run_signed(signed_snap.clone(), manifest, &payloads)?;
+    let unchecked: Vec<String> = base.steps.iter().filter(|s| s.signature_checked == Some(false)).map(|s| s.label.clone()).collect();
+    if let Some((b, r)) = base.steps.iter().zip(&baseline.steps).find(|(b, r)| b.result != r.result) {
+        return Ok(SignedCheck {
+            unavailable: Some(format!(
+                "the deployed contract did not accept its own signed requests at \"{}\" ({} instead of {})",
+                r.label, b.result, r.result
+            )),
+            accounts: touched.len(),
+            unchecked,
+            candidates: Vec::new(),
+        });
+    }
+    let mut out = Vec::new();
+    for (recorded, wasm) in candidates {
+        let signed = candidate_with(&signed_snap, manifest, &recorded.label, wasm, Auth::Signed(&payloads))?;
+        let mut findings = Vec::new();
+        for (i, (sg, rec)) in signed.steps.iter().zip(&recorded.steps).enumerate() {
+            // Only calls that succeed without signature checking: anything else is already a
+            // result difference and says nothing about signatures.
+            if sg.signature_checked != Some(true) || rec.failed || !sg.failed {
+                continue;
+            }
+            let kind = if baseline.steps[i].payloads.is_empty() && !rec.payloads.is_empty() { "new requirement" } else { "rejected" };
+            findings.push(SignedFinding { step: i + 1, label: rec.label.clone(), kind, detail: sg.result.clone() });
+        }
+        let outside = signed
+            .misses
+            .iter()
+            .filter(|(id, k)| !captured.contains(*id) && !synthetic(k, &touched))
+            .map(|(_, k)| k.clone())
+            .collect();
+        let unchecked = signed.steps.iter().filter(|s| s.signature_checked == Some(false)).map(|s| s.label.clone()).collect();
+        out.push(SignedCandidate { label: recorded.label.clone(), findings, unchecked, outside });
+    }
+    Ok(SignedCheck { unavailable: None, accounts: touched.len(), unchecked, candidates: out })
 }
 
 #[cfg(test)]
@@ -525,5 +663,64 @@ mod tests {
         assert!(cand.upgrade.as_ref().unwrap().failed);
         assert_eq!(cand.installed, Some(false));
         assert_eq!(cand.steps[0].result, "12400000000", "the deployed code answered");
+    }
+
+    fn demo_signed(cands: &[&str]) -> (SignedCheck, Branch) {
+        let manifest = Manifest::load(&demo("manifest.json")).unwrap();
+        let snap = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();
+        let base = run(snap.clone(), &manifest, "baseline").unwrap();
+        let wasms: Vec<Vec<u8>> = cands.iter().map(|c| std::fs::read(demo(&format!("wasm/{c}.wasm"))).unwrap()).collect();
+        let recs: Vec<Branch> = cands.iter().zip(&wasms).map(|(c, w)| candidate(&snap, &manifest, c, w).unwrap()).collect();
+        let pairs: Vec<(&Branch, &[u8])> = recs.iter().zip(&wasms).map(|(r, w)| (r, w.as_slice())).collect();
+        let captured = snap.ledger_entries.iter().map(|(k, _)| key_id(k)).collect();
+        (signed_check(&snap, &manifest, &base, &pairs, &captured).unwrap(), base)
+    }
+
+    #[test]
+    fn payloads_are_recorded_per_call() {
+        let (_, base) = demo_signed(&[]);
+        let with: Vec<usize> = base.steps.iter().enumerate().filter(|(_, s)| !s.payloads.is_empty()).map(|(i, _)| i).collect();
+        assert_eq!(with, vec![4], "only the transfer requires authorization");
+    }
+
+    #[test]
+    fn signatures_for_the_deployed_contract_work_on_compatible_and_fail_on_authscope() {
+        let (check, _) = demo_signed(&["token-v2-compatible", "token-v2-authscope"]);
+        assert!(check.unavailable.is_none(), "{:?}", check.unavailable);
+        assert_eq!(check.accounts, 1);
+        assert!(check.candidates[0].findings.is_empty(), "compatible accepts the signed transfer");
+        let f = &check.candidates[1].findings;
+        assert_eq!(f.len(), 1);
+        assert_eq!((f[0].step, f[0].kind), (5, "rejected"));
+        assert!(check.candidates.iter().all(|c| c.outside.is_empty() && c.unchecked.is_empty()));
+    }
+
+    #[test]
+    fn a_candidate_failing_for_other_reasons_is_not_a_signature_finding() {
+        // v2-broken's transfer fails with InsufficientBalance with or without signatures.
+        let (check, _) = demo_signed(&["token-v2-broken"]);
+        assert!(check.candidates[0].findings.is_empty());
+    }
+
+    #[test]
+    fn the_signed_check_is_deterministic() {
+        let a = demo_signed(&["token-v2-authscope"]).0;
+        let b = demo_signed(&["token-v2-authscope"]).0;
+        assert_eq!(a.candidates[0].findings[0].detail, b.candidates[0].findings[0].detail);
+        let manifest = Manifest::load(&demo("manifest.json")).unwrap();
+        let snap = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();
+        let base = run(snap.clone(), &manifest, "baseline").unwrap();
+        let p: Vec<Vec<crate::signing::Payload>> = base.steps.iter().map(|s| s.payloads.clone()).collect();
+        assert_eq!(crate::signing::sign(&snap, 4, &p[4]), crate::signing::sign(&snap, 4, &p[4]));
+    }
+
+    #[test]
+    fn the_check_is_unavailable_when_the_deployed_contract_rejects_its_own_requests() {
+        let manifest = Manifest::load(&demo("manifest.json")).unwrap();
+        let snap = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();
+        let mut base = run(snap.clone(), &manifest, "baseline").unwrap();
+        base.steps[4].payloads.clear(); // nothing signed for the transfer
+        let check = signed_check(&snap, &manifest, &base, &[], &Default::default()).unwrap();
+        assert!(check.unavailable.unwrap().contains("A sends 100 RHD to B"));
     }
 }

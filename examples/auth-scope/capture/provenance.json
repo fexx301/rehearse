@@ -7,6 +7,10 @@
     {
       "label": "v2-authscope",
       "wasm_sha256": "a288e69321d6b63ebe019383099c32ccd51dcf1332e4329e6d974379839d3c94"
+    },
+    {
+      "label": "v2-noauth",
+      "wasm_sha256": "df415048feff1facb9b58eeb839d1bc7e538ba524cdd58869ef392466b5f68c8"
     }
   ],
   "closure_rounds": [
@@ -18,13 +22,13 @@
         }
       ],
       "keys": 6,
-      "ledger": 5070572,
+      "ledger": 5071085,
       "round": 1
     },
     {
       "added": [],
       "keys": 7,
-      "ledger": 5070573,
+      "ledger": 5071086,
       "round": 2
     }
   ],
@@ -39,15 +43,15 @@
   "keys_verified_absent": [
     "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
     "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
-    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 8505573377549415299 })"
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 7645659887705306226 })"
   ],
   "keys_verified_absent_xdr": [
     "AAAAAAAAAAA7Tb1aTkDvO5zanYKMi25YLyMAZs6BsXGX29jPUZEjKA==",
     "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVCyEDby6XMK4AAAAA",
-    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVdgnd7CPaM4MAAAAA"
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVahrXKNAgtHIAAAAA"
   ],
-  "ledger": 5070573,
-  "ledger_close_time": 1791376452,
+  "ledger": 5071086,
+  "ledger_close_time": 1791379017,
   "network": "testnet",
   "network_passphrase": "Test SDF Network ; September 2015",
   "protocol": 29,
@@ -56,31 +60,31 @@
   "simulations": [
     {
       "footprint_keys": 3,
-      "simulated_at_ledger": 5070571,
+      "simulated_at_ledger": 5071083,
       "step": "holder A balance"
     },
     {
       "footprint_keys": 3,
-      "simulated_at_ledger": 5070571,
+      "simulated_at_ledger": 5071084,
       "step": "holder B balance"
     },
     {
       "footprint_keys": 6,
-      "simulated_at_ledger": 5070571,
+      "simulated_at_ledger": 5071084,
       "step": "A sends 100 RHD to B"
     },
     {
       "footprint_keys": 3,
-      "simulated_at_ledger": 5070572,
+      "simulated_at_ledger": 5071084,
       "step": "holder A balance after"
     },
     {
       "footprint_keys": 3,
-      "simulated_at_ledger": 5070572,
+      "simulated_at_ledger": 5071085,
       "step": "holder B balance after"
     }
   ],
-  "snapshot_sha256": "9fa8bd31c4c415f83cd121593039ea6881db57858bbee87883fe57ea2b1a2d23",
+  "snapshot_sha256": "8341870ba3d23d96a875181ac9a6ad6fd0418fbb811761e03d6bef8924d224fe",
   "tool": "rehearse 0.1.0",
   "ttl_configuration": "SDK default state-archival settings, not the network's"
 }

@@ -17,11 +17,13 @@ trap 'rm -rf "$out"' EXIT
 R=cli/target/release/rehearse
 status=0
 
-# check NAME DIR CANDIDATE...: replay DIR's committed capture, render, compare both reports.
+# check NAME DIR CANDIDATE|--FLAG...: replay DIR's committed capture, render, compare both reports.
 check() {
   local name="$1" dir="$2"; shift 2
   local args=()
-  for c in "$@"; do args+=(--candidate "$c"); done
+  for c in "$@"; do
+    case "$c" in --*) args+=("$c") ;; *) args+=(--candidate "$c") ;; esac
+  done
   mkdir -p "$out/$name"
   "$R" replay --manifest "$dir/manifest.json" --capture "$dir/capture" "${args[@]}" --out "$out/$name/report.json" >/dev/null
   "$R" render --report "$out/$name/report.json" --out "$out/$name/report.html" >/dev/null
@@ -38,7 +40,7 @@ check() {
 
 W=demo/wasm
 check demo         demo                  v2-compatible=$W/token-v2-compatible.wasm v2-broken=$W/token-v2-broken.wasm
-check auth-scope   examples/auth-scope   v2-compatible=$W/token-v2-compatible.wasm v2-authscope=$W/token-v2-authscope.wasm
+check auth-scope   examples/auth-scope   v2-compatible=$W/token-v2-compatible.wasm v2-authscope=$W/token-v2-authscope.wasm v2-noauth=$W/token-v2-noauth.wasm --check-signatures
 check events       examples/events       v2-swapped=$W/token-events-v2-swapped.wasm
 check upgrade-path examples/upgrade-path v2-compatible=$W/token-v2-compatible.wasm v2-broken=$W/token-v2-broken.wasm
 exit $status

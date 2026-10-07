@@ -37,12 +37,16 @@ Full report: [live](https://fexx301.github.io/rehearse/demo/report.html), or [`d
 
 Results are not the only thing an upgrade can change. In [`examples/auth-scope`](examples/auth-scope) ([live report](https://fexx301.github.io/rehearse/examples/auth-scope/report.html)), the candidate changes one line of `transfer`, from `from.require_auth()` to `from.require_auth_for_args((to,))`. The sender still authorizes the transfer and the recipient, but the signature no longer covers the amount. The candidate passes all 8 tests in the shared suite, keeps a byte-identical spec, and returns exactly the same results.
 
-Rehearse flags it anyway. During replay it records every authorization each call requires (address, function, exact arguments, nested calls) and compares them between versions:
+Rehearse flags it in two ways. First, during replay it records every authorization each call requires (address, function, exact arguments, nested calls) and compares them between versions:
 
 | Version | "A sends 100 RHD to B" requires |
 |---|---|
 | deployed | `GA5U… authorizes transfer(GA5U…, GAA4…, 1000000000)` |
 | v2-authscope | `GA5U… authorizes transfer(GAA4…)` |
+
+Second, with `replay --check-signatures`, it signs the deployed contract's own requests with test keys (written into a copy of the state as the accounts' signers) and replays every version with signature checking on. The deployed contract accepts its own signed transfer, and `v2-authscope` **rejects** it. That's what a wallet's signature for today's contract would hit after the upgrade.
+
+The two checks cover different failures. A third candidate in the example deletes `require_auth()` entirely. It still *accepts* the signatures, because nothing asks for them, but the required-authorization comparison flags it.
 
 Contract events are compared the same way, on every call where both versions succeed. In [`examples/events`](examples/events) ([live report](https://fexx301.github.io/rehearse/examples/events/report.html)), a candidate publishes its `transfer` event with `from` and `to` swapped. Balances still move correctly and every result matches, but anything reading the event would record the money going the wrong way. Rehearse flags the event difference.
 
@@ -125,7 +129,7 @@ rehearse capture --manifest manifest.json --source G… --out capture \
 
 # Offline from here on.
 rehearse replay --manifest manifest.json --capture capture \
-  --candidate v2=path/to/candidate.wasm --out report.json [--fail-on-divergence]
+  --candidate v2=path/to/candidate.wasm --out report.json [--fail-on-divergence] [--check-signatures]
 rehearse render --report report.json --out report.html
 ```
 
@@ -144,7 +148,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 ## Scope and limits
 
 - **Runtime.** `soroban-sdk` 28.0.0 and `soroban-env-host` 28.0.2 with the experimental `next` feature, which runs protocol-29 state. This is close to production behaviour but not exact protocol-29 parity. Tested with contracts built by soroban-sdk 28 (the demo) and soroban-sdk 22 (Blend's pool, on testnet and mainnet). State-archival settings in the snapshot use SDK defaults, not the network's.
-- **Signatures are not checked.** Replay holds nobody's keys, so every `require_auth` is satisfied. What each call *requires* (address, function, arguments) is still recorded and compared. Signatures themselves, and custom account logic (`__check_auth`), are not run.
+- **Real signers.** Replay holds nobody's keys. By default every `require_auth` is satisfied, and what each call *requires* is recorded and compared. With `--check-signatures`, ordinary accounts get test signers in a copy of the state (accounts missing on-chain are created there), and real signature verification runs against the deployed contract's own signed requests. Smart-wallet accounts (`__check_auth`) are not checked, and calls that need them are listed as unchecked.
 - **Upgrade path is opt-in.** By default the candidate's code is swapped in directly. With an `upgrade` block, your contract's own upgrade function and migration calls run first. Authorization for them is mocked like everything else.
 - **Only what you list.** Calls not in the manifest, and fee and resource costs, are not compared.
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
@@ -164,7 +168,7 @@ Rehearse builds on ideas that already exist, and credits them:
 
 ```
 cli/              the rehearse CLI (capture, replay, render)
-demo/contracts/   token v1 and its candidates (compatible, broken, authscope), plus the events token and its swapped-event candidate, all sharing one test suite
+demo/contracts/   token v1 and its candidates (compatible, broken, authscope, noauth), plus the events token and its swapped-event candidate; all but the deliberately insecure noauth share one test suite
 demo/wasm/        the built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML

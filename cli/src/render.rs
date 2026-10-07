@@ -227,6 +227,8 @@ table.changes td { font: 500 var(--text-xs)/1.6 var(--font-mono); overflow-wrap:
 table.changes td ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-xs); }
 table.changes td .none { color: var(--color-muted); font-family: var(--font-body); }
 table.changes td.diff { font-weight: 600; }
+.gate { margin: 0 0 var(--space-lg); font-size: var(--text-sm); color: var(--color-ok); }
+.gate.bad { color: var(--color-danger); }
 @media (max-width: 600px) {
   .stack.changes td { display: block; text-align: left; }
   .stack.changes td::before { display: block; margin-bottom: 0.2rem; }
@@ -400,7 +402,8 @@ pub fn render(report: &Value) -> String {
 
     let via_upgrade = cands.iter().any(|c| c["installed_via_upgrade"].is_object());
     let failed_upgrades: Vec<&Value> = cands.iter().copied().filter(|c| s(c, "status") == "upgrade failed").collect();
-    let has_auth_or_events = via_upgrade || cands.iter().any(|c| !arr(&c["auth_differences"]).is_empty() || !arr(&c["event_differences"]).is_empty());
+    let sig_check = report["signature_check"].is_object();
+    let has_auth_or_events = via_upgrade || sig_check || cands.iter().any(|c| !arr(&c["auth_differences"]).is_empty() || !arr(&c["event_differences"]).is_empty());
     let mut h = String::new();
     let _ = write!(h, r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -665,6 +668,47 @@ pub fn render(report: &Value) -> String {
                 if who.is_empty() { r#"<span class="none">None required</span>"#.to_string() } else { format!("<ul>{}</ul>", who.join("")) });
         }
         h.push_str("</tbody></table></div></section>\n");
+    }
+
+    // Signed authorizations (replay --check-signatures).
+    if sig_check {
+        let sc = &report["signature_check"];
+        let gate = s(sc, "deployed_contract");
+        let available = !gate.starts_with("check unavailable");
+        let _ = write!(h, r#"<section aria-labelledby="signed"><div class="head"><h2 id="signed">Signatures made for the deployed contract</h2><p>Each account that had to authorize was given a test signer in a copy of the captured state. The deployed contract's own requests were signed with it and every version replayed with signature checking on. This shows whether those signatures still work on each candidate. It does not show that a candidate checks authorization at all; that is what "Who must authorize" compares.</p></div>
+<p class="gate{}">{}{}</p>"#,
+            if available { "" } else { " bad" },
+            esc(&format!("The deployed contract {gate}")),
+            if arr(&sc["unchecked_calls"]).is_empty() { ".".to_string() } else {
+                esc(&format!(". Not checked (a contract account had to authorize): {}.", arr(&sc["unchecked_calls"]).iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", ")))
+            });
+        if available {
+            h.push_str(r#"<div class="scroll"><table class="stack changes"><colgroup><col class="call"><col><col></colgroup><thead><tr><th scope="col">Candidate</th><th scope="col">Signed requests</th><th scope="col">Note</th></tr></thead><tbody>
+"#);
+            for c in cands {
+                let diffs = arr(&c["signature_differences"]);
+                let (cell, class) = if diffs.is_empty() {
+                    ("accepted".to_string(), "")
+                } else {
+                    let items: Vec<String> = diffs.iter().map(|d| {
+                        let what = if s(d, "finding") == "new requirement" { "requires an authorization the deployed contract didn't" } else { "rejected" };
+                        format!("<li>{what} at call {}: {}</li>", d["step"], esc(&sentence(s(d, "label"))))
+                    }).collect();
+                    (format!("<ul>{}</ul>", items.join("")), " class=\"diff\"")
+                };
+                let note = if diffs.is_empty() && !arr(&c["auth_differences"]).is_empty() {
+                    "Accepted, but what it requires differs from the deployed contract: see \"Who must authorize\". A candidate that stops requiring an authorization still accepts signatures nobody asks for."
+                } else if diffs.is_empty() {
+                    "Same signatures accepted."
+                } else {
+                    "A wallet's signature for the deployed contract would fail on this candidate."
+                };
+                let _ = write!(h, r#"<tr><th scope="row">{}<small>{}</small></th><td{class} data-v="signed requests">{cell}</td><td data-v="note"><span class="none">{}</span></td></tr>
+"#, esc(s(c, "label")), esc(&hash8(c)), esc(note));
+            }
+            h.push_str("</tbody></table></div>");
+        }
+        h.push_str("</section>\n");
     }
 
     // Authorization and event changes, compared on calls where both versions succeeded.

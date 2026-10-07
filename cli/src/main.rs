@@ -2,13 +2,14 @@
 //! on captured ledger state, before upgrading.
 //!
 //!   rehearse capture --manifest M --source G... --out DIR [--candidate LABEL=WASM]...
-//!   rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence]
+//!   rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence] [--check-signatures]
 mod capture;
 mod fmt;
 mod manifest;
 mod render;
 mod replay;
 mod rpc;
+mod signing;
 
 use manifest::Manifest;
 use serde_json::{json, Value};
@@ -21,7 +22,7 @@ const USAGE: &str = concat!(
 
 usage:
   rehearse capture --manifest M --source G... --out DIR [--candidate LABEL=WASM]...
-  rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence]
+  rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence] [--check-signatures]
   rehearse render  --report REPORT.json --out REPORT.html
   rehearse --help | --version
 
@@ -30,7 +31,9 @@ usage:
            Each --candidate is replayed locally so keys only it reads are captured too.
   replay   Run the calls offline on the deployed code and on each candidate, each in its own copy
            of the captured state, and write a JSON report. --fail-on-divergence exits 2 when any
-           candidate differs (0 when none do, 1 on errors).
+           candidate differs (0 when none do, 1 on errors). --check-signatures also signs the
+           deployed contract's own authorization requests with test keys and checks each
+           candidate accepts them with signature checking on.
   render   Turn a report.json into one self-contained HTML page.
 
 docs: https://github.com/fexx301/rehearse");
@@ -43,10 +46,11 @@ struct Args {
     report: Option<PathBuf>,
     candidates: Vec<(String, PathBuf)>,
     fail_on_divergence: bool,
+    check_signatures: bool,
 }
 
 fn parse(rest: &[String]) -> Result<Args, String> {
-    let mut a = Args { manifest: None, source: None, out: None, capture: None, report: None, candidates: vec![], fail_on_divergence: false };
+    let mut a = Args { manifest: None, source: None, out: None, capture: None, report: None, candidates: vec![], fail_on_divergence: false, check_signatures: false };
     let mut it = rest.iter();
     while let Some(flag) = it.next() {
         let mut value = || it.next().cloned().ok_or(format!("{flag} needs a value"));
@@ -61,6 +65,7 @@ fn parse(rest: &[String]) -> Result<Args, String> {
             "--capture" => a.capture = Some(value()?.into()),
             "--report" => a.report = Some(value()?.into()),
             "--fail-on-divergence" => a.fail_on_divergence = true,
+            "--check-signatures" => a.check_signatures = true,
             "--candidate" => {
                 let v = value()?;
                 let (label, path) = v.split_once('=').ok_or("--candidate takes LABEL=WASM")?;
@@ -119,6 +124,7 @@ fn main() {
 
 fn replay_cmd(a: Args) -> Result<(), String> {
     let fail_on_divergence = a.fail_on_divergence;
+    let check_signatures = a.check_signatures;
     let manifest = Manifest::load(a.manifest.as_ref().ok_or("--manifest is required")?)?;
     let dir = a.capture.ok_or("--capture is required")?;
     let out = a.out.ok_or("--out is required")?;
@@ -147,9 +153,19 @@ fn replay_cmd(a: Args) -> Result<(), String> {
 
     let baseline = replay::run(snap.clone(), &manifest, "baseline (deployed)")?;
     let mut candidates = Vec::new();
-    for (label, wasm) in read_candidates(&a.candidates)? {
-        candidates.push(replay::candidate(&snap, &manifest, &label, &wasm)?);
+    let wasms = read_candidates(&a.candidates)?;
+    for (label, wasm) in &wasms {
+        candidates.push(replay::candidate(&snap, &manifest, label, wasm)?);
     }
+    let signed = if check_signatures {
+        let mut captured: BTreeSet<String> = snap.ledger_entries.iter().map(|(k, _)| replay::key_id(k)).collect();
+        captured.extend(verified_absent.iter().cloned());
+        let pairs: Vec<(&replay::Branch, &[u8])> = candidates.iter().zip(&wasms).map(|(c, (_, w))| (c, w.as_slice())).collect();
+        Some(replay::signed_check(&snap, &manifest, &baseline, &pairs, &captured)?)
+    } else {
+        None
+    };
+    let signed_for = |label: &str| signed.as_ref().and_then(|s| s.candidates.iter().find(|c| c.label == label));
 
     let uncaptured = |b: &replay::Branch| -> Vec<String> {
         b.misses.iter().filter(|(id, _)| !verified_absent.contains(*id)).map(|(_, k)| fmt::ledger_key(k)).collect()
@@ -219,7 +235,14 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             .filter(|(_, (b, x))| both_ok(b, x) && b.events != x.events)
             .map(|(i, (b, x))| json!({"step": i + 1, "label": b.label, "baseline": b.events, "candidate": x.events}))
             .collect();
-        let outside = uncaptured(c);
+        let mut outside = uncaptured(c);
+        let sig = signed_for(&c.label);
+        if let Some(sc) = sig {
+            outside.extend(sc.outside.iter().map(fmt::ledger_key));
+        }
+        let sig_diffs: Vec<Value> = sig
+            .map(|sc| sc.findings.iter().map(|f| json!({"step": f.step, "label": f.label, "finding": f.kind, "candidate": f.detail})).collect())
+            .unwrap_or_default();
         // A failed upgrade call, a failed migration, or a contract still running other code all
         // mean the workflow did not test the candidate as it would really be installed.
         let upgrade_failed = c.upgrade.as_ref().is_some_and(|u| u.failed)
@@ -227,7 +250,7 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             || c.installed == Some(false);
         let status = if upgrade_failed {
             "upgrade failed"
-        } else if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() {
+        } else if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() || !sig_diffs.is_empty() {
             "diverged"
         } else if !outside.is_empty() {
             "unverified: read state outside the capture"
@@ -240,6 +263,9 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         }
         if !event_diffs.is_empty() {
             sum["event_differences"] = json!(event_diffs.len());
+        }
+        if !sig_diffs.is_empty() {
+            sum["signature_differences"] = json!(sig_diffs.len());
         }
         summary.push(sum);
         let mut cand = json!({
@@ -260,6 +286,12 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         if !event_diffs.is_empty() {
             cand["event_differences"] = json!(event_diffs);
         }
+        if !sig_diffs.is_empty() {
+            cand["signature_differences"] = json!(sig_diffs);
+        }
+        if let Some(sc) = sig.filter(|sc| !sc.unchecked.is_empty()) {
+            cand["signature_unchecked_calls"] = json!(sc.unchecked);
+        }
         if let Some(u) = &c.upgrade {
             let one = |s: &replay::StepResult| json!({"label": s.label, "call": s.call, "args": s.args, "result": s.result, "failed": s.failed, "auths": s.auths});
             cand["installed_via_upgrade"] = json!({
@@ -271,7 +303,7 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         candidate_reports.push(cand);
     }
 
-    let report = json!({
+    let mut report = json!({
         "tool": concat!("rehearse ", env!("CARGO_PKG_VERSION")),
         "claim": "Observed differences for the listed calls on the captured state. Not a safety certification.",
         "manifest": manifest,
@@ -303,6 +335,15 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         "candidates": candidate_reports,
         "summary": summary,
     });
+    if let Some(sc) = &signed {
+        report["signature_check"] = json!({
+            "method": "Each ordinary account that has to authorize is given a test signer in a copy of the captured state. The deployed contract's own authorization requests are signed with those keys, and every version replays with signature checking on.",
+            "scope": "Shows whether authorizations signed for the deployed contract still work on each candidate. It does not show that a candidate checks authorization at all: a candidate that drops a requirement still passes here, and appears under auth_differences instead. Contract (smart-wallet) accounts are not checked.",
+            "test_signer_accounts": sc.accounts,
+            "deployed_contract": match &sc.unavailable { None => "accepted its own signed requests".to_string(), Some(why) => format!("check unavailable: {why}") },
+            "unchecked_calls": sc.unchecked,
+        });
+    }
     capture::write_json(&out, &report)?;
     print_table(&baseline, &candidates);
     for s in &summary {

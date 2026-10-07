@@ -1,32 +1,37 @@
-# Authorization check: a signature that stops covering the amount
+# Authorization checks: what a candidate requires, and whether signatures still work
 
-The candidate `token-v2-authscope` ([source](../../demo/contracts/token-v2-authscope/src/lib.rs)) differs from the deployed token in one line of `transfer`:
+Three candidates, all with the same contract spec as the deployed token and all returning exactly the same results for this workflow:
 
-```diff
--        from.require_auth();
-+        from.require_auth_for_args((to.clone(),).into_val(&e));
-```
-
-The sender still has to authorize the transfer, and still names the recipient. But the signature no longer includes the amount, so an authorization for "A pays B" no longer says how much. That is a security regression, and nothing in the usual checks catches it:
-- it passes all 8 tests in the shared suite, which checks *who* authorized, not *what*;
-- its contract spec is byte-identical to the deployed version;
-- every call returns exactly what the deployed contract returns.
+| Candidate | Change to `transfer` | Its tests |
+|---|---|---|
+| `token-v2-compatible` | none (refactor) | passes the shared suite |
+| `token-v2-authscope` ([source](../../demo/contracts/token-v2-authscope/src/lib.rs)) | `from.require_auth()` → `from.require_auth_for_args((to,))`: the signature no longer covers the amount | passes the shared suite, which checks *who* authorized, not *what* |
+| `token-v2-noauth` ([source](../../demo/contracts/token-v2-noauth/src/lib.rs)) | `from.require_auth()` deleted: anyone can move anyone's balance | deliberately insecure; its own test demonstrates the hole (the shared suite would fail) |
 
 ## What Rehearse shows
 
-[`manifest.json`](manifest.json) reads two holders, moves 100 RHD from A to B, and reads both again. It was captured from the deployed demo token on testnet ledger 5,070,573 ([`capture/`](capture/)), with the candidate replayed during capture so nothing it reads falls outside the snapshot.
+[`manifest.json`](manifest.json) reads two holders, moves 100 RHD from A to B, and reads both again. It was captured from the deployed demo token on testnet ledger 5,071,086, with all three candidates replayed during capture. The report ([`report.html`](report.html), [`report.json`](report.json)) is produced with `replay --check-signatures`, and it runs two different checks.
 
-All five results match ([`report.html`](report.html), [`report.json`](report.json)). The report still flags `v2-authscope` as diverged, because of what call 3 required:
+**1. Who must authorize.** Rehearse records every authorization each call requires (address, function, exact arguments) and compares it with the deployed contract:
 
-| | Required authorization for "A sends 100 RHD to B" |
+| | "A sends 100 RHD to B" requires |
 |---|---|
-| deployed | `GA5U…RAL3 authorizes CCFM…XIRI.transfer(GA5U…RAL3, GAA4…PJGI, 1000000000)` |
-| v2-authscope | `GA5U…RAL3 authorizes CCFM…XIRI.transfer(GAA4…PJGI)` |
+| deployed | `GA5U… authorizes transfer(GA5U…, GAA4…, 1000000000)` |
+| v2-authscope | `GA5U… authorizes transfer(GAA4…)`, flagged |
+| v2-noauth | nothing, flagged |
 
-`v2-compatible`, the control, shows no observed difference. `replay --fail-on-divergence` exits 2 because of `v2-authscope`.
+**2. Signatures made for the deployed contract.** In a copy of the captured state, account A is given a test signer. The deployed contract's own request is signed with it, the way a wallet signs what simulation returns, and every version replays with signature checking on:
+- **Sanity check:** the deployed contract accepts its own signed request, so the check is valid for this workflow.
+- **v2-compatible:** accepts it.
+- **v2-authscope:** **rejects** it. A wallet's signature for today's contract would fail after this upgrade.
+- **v2-noauth:** accepts it. Nothing asks for the signature any more, and the host ignores an unused one.
 
-## How it works, and its limits
+The second check never catches a missing authorization; the first always does. Use both.
 
-Replay mocks authorization, since it holds nobody's keys. While mocking, the Soroban host still records every authorization a call requires: the address, the function, the exact arguments, and any nested calls. Rehearse compares those records between the deployed code and each candidate, on every call where both succeed.
+`replay --fail-on-divergence` exits 2 for `v2-authscope` and `v2-noauth`, and 0 for `v2-compatible`. The CLI's command-line tests check all three.
 
-It does not verify signatures, and it does not run custom account logic (`__check_auth`), which needs real signatures. It shows *what* a candidate asks users to authorize, not whether a particular wallet would approve it.
+## Limits
+
+- **Test keys stand in for real signers.** The signed check uses keys Rehearse generates, written into a copy of the state as the accounts' signers. It shows whether signatures *of the deployed contract's requests* still verify, not that any real wallet would sign.
+- **Ordinary accounts only.** Accounts that don't exist on-chain (like the demo holders) are created in the copy. A contract that reads native balances or account existence could behave differently there.
+- **Smart wallets are not covered.** Calls where a contract (smart-wallet) account must authorize are not checked, and the report lists them. Each wallet design verifies signatures its own way.

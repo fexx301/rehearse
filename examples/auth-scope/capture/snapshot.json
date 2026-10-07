@@ -1,7 +1,7 @@
 {
   "protocol_version": 29,
-  "sequence_number": 5070573,
-  "timestamp": 1791376452,
+  "sequence_number": 5071086,
+  "timestamp": 1791379017,
   "network_id": "cee0302d59844d32bdca915c8203dd44b33fbb7edc19051ea37abedf28ecd472",
   "base_reserve": 5000000,
   "min_persistent_entry_ttl": 4096,

@@ -68,3 +68,42 @@ fn a_clean_upgrade_passes_the_check() {
     assert_eq!(code, Some(0));
     assert_eq!(r["candidates"][0]["status"], "no observed difference");
 }
+
+fn replay_signed(candidate: &str) -> (Option<i32>, serde_json::Value) {
+    let dir = std::env::temp_dir().join(format!("rehearse-cli-{}-signed-{candidate}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let report = dir.join("report.json");
+    let out = bin()
+        .args(["replay", "--manifest"]).arg(repo("examples/auth-scope/manifest.json"))
+        .arg("--capture").arg(repo("examples/auth-scope/capture"))
+        .arg("--candidate").arg(format!("{candidate}={}", repo(&format!("demo/wasm/token-{candidate}.wasm")).display()))
+        .arg("--out").arg(&report)
+        .args(["--check-signatures", "--fail-on-divergence"])
+        .output()
+        .unwrap();
+    let r: serde_json::Value = serde_json::from_slice(&std::fs::read(&report).unwrap()).unwrap();
+    (out.status.code(), r)
+}
+
+#[test]
+fn signatures_for_the_deployed_contract_are_rejected_by_a_narrower_candidate() {
+    let (code, r) = replay_signed("v2-authscope");
+    assert_eq!(code, Some(2));
+    assert_eq!(r["signature_check"]["deployed_contract"], "accepted its own signed requests");
+    assert_eq!(r["candidates"][0]["signature_differences"][0]["finding"], "rejected");
+}
+
+#[test]
+fn a_candidate_that_drops_auth_passes_signing_but_fails_the_requirement_comparison() {
+    let (code, r) = replay_signed("v2-noauth");
+    assert_eq!(code, Some(2));
+    assert!(r["candidates"][0].get("signature_differences").is_none(), "nothing asks for the signatures");
+    assert_eq!(r["candidates"][0]["auth_differences"][0]["candidate"], serde_json::json!([]));
+}
+
+#[test]
+fn a_compatible_candidate_passes_with_signatures_checked() {
+    let (code, r) = replay_signed("v2-compatible");
+    assert_eq!(code, Some(0));
+    assert_eq!(r["candidates"][0]["status"], "no observed difference");
+}
