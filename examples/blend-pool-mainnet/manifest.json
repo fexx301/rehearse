@@ -1,0 +1,13 @@
+{
+  "description": "Read-only health check of Blend's FixedV2 lending pool on Stellar mainnet: pool config, admin, reserve list, and the USDC and XLM reserves.",
+  "network": "mainnet",
+  "rpc": "https://soroban-rpc.mainnet.stellar.gateway.fm",
+  "contract": "CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD",
+  "steps": [
+    { "label": "pool config", "call": "get_config", "args": [] },
+    { "label": "pool admin", "call": "get_admin", "args": [] },
+    { "label": "reserve list", "call": "get_reserve_list", "args": [] },
+    { "label": "USDC reserve", "call": "get_reserve", "args": [{ "address": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75" }] },
+    { "label": "XLM reserve", "call": "get_reserve", "args": [{ "address": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA" }] }
+  ]
+}

@@ -4,7 +4,7 @@
 
 Replay a Stellar smart contract's real workflow against candidate Wasm, on ledger state captured from the network, before you upgrade.
 
-**See it:** [live demo report](https://fexx301.github.io/rehearse/demo/report.html) · [a pull request blocked by the upgrade check](https://github.com/fexx301/rehearse/pull/1) · [a run on Blend's lending pool](https://fexx301.github.io/rehearse/examples/blend-pool/report.html)
+**See it:** [live demo report](https://fexx301.github.io/rehearse/demo/report.html) · [a pull request blocked by the upgrade check](https://github.com/fexx301/rehearse/pull/1) · [a read-only run on Blend's lending pool on mainnet](https://fexx301.github.io/rehearse/examples/blend-pool-mainnet/report.html)
 
 ![Rehearse report: upgrading to v2-broken changes 7 of 8 results](docs/report-hero.png)
 
@@ -42,6 +42,8 @@ Full report: [live](https://fexx301.github.io/rehearse/demo/report.html), or [`d
 - **Fidelity:** the offline baseline matched the live network, except for interest that accrues with time.
 - **Why that's the right answer:** the fix only touches flash loans, which those reads never exercise. Rehearse compares the calls you list, nothing more.
 
+[`examples/blend-pool-mainnet`](examples/blend-pool-mainnet) ([live report](https://fexx301.github.io/rehearse/examples/blend-pool-mainnet/report.html)) repeats the run on **Stellar mainnet**, against Blend's live `FixedV2` pool, through a public RPC. The capture is read-only: nothing is signed or submitted. The mainnet pool runs the same published v2.0.0 code, and the result is the same: all five reads are identical across all three versions, with nothing read outside the capture.
+
 ## Reproduce it
 
 Everything needed to regenerate the demo report is committed: the captured snapshot, the three Wasm builds and the manifest. Replay makes no network calls.
@@ -60,11 +62,14 @@ docker run --rm --network none rehearse
 
 ## Use it on your contract
 
-Build the CLI (tested with Rust 1.95). The binary lands at `cli/target/release/rehearse`.
+Install the CLI (tested with Rust 1.95):
 
 ```sh
-cargo build --release --manifest-path cli/Cargo.toml
+cargo install --git https://github.com/fexx301/rehearse --locked rehearse
+rehearse --help
 ```
+
+Or, from a clone: `cargo build --release --manifest-path cli/Cargo.toml` (the binary lands at `cli/target/release/rehearse`).
 
 Write a manifest listing the calls that matter to your holders, in order. Arguments are typed. `expect` is optional and is checked against the deployed code. `display` is optional and only affects how amounts are formatted.
 
@@ -120,7 +125,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
 - **One ledger.** A capture is a point-in-time copy. Recapture before relying on an old report.
 - **Up to 200 keys per capture.** Every key is fetched in one `getLedgerEntries` call, so that all of them come from the same ledger. A workflow touching more than 200 ledger entries stops with an error rather than mixing ledgers.
-- **Testnet only, so far.** Capture has been run against testnet. Mainnet capture uses the same read-only RPC calls and should work, but it is untested.
+- **Networks.** Captures have been run on testnet (the demo and Blend's testnet pool) and, read-only, on mainnet (Blend's `FixedV2` pool through a public RPC). Other networks and RPC providers are untested.
 
 ## Related tools
 
@@ -139,7 +144,7 @@ demo/wasm/        the three built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
 demo/upgrade/     the proposed upgrade the pull-request check replays
-examples/         real-world runs (Blend's testnet pool)
+examples/         real-world runs (Blend's lending pool on testnet and mainnet)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check
