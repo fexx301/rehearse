@@ -8,7 +8,7 @@ The checks Rehearse had to pass before release, how each was run, and the result
 | G2 Regression on captured state | **Pass on 6 of 7 criteria; ShippedLabs criterion inconclusive** (the tool cannot parse protocol-28 contracts). Fallback not triggered. | 2026-10-06 16:49 |
 | G4 Offline replay | **Pass** | 2026-10-06 |
 | G5 HTML report | **Pass** | 2026-10-06 |
-| G6 Clean-machine build | **Pass** (Linux arm64 container; x86-64 not yet run) | 2026-10-06 |
+| G6 Clean-machine build | **Pass** (Linux arm64 container; Linux x86-64 in CI) | 2026-10-06 |
 | G7 Honest README | **Pass** | 2026-10-06 |
 
 ## G1: soroban-fork against live protocol-29 testnet
@@ -117,7 +117,7 @@ docker run --rm --network none rehearse:g6
 - The committed files were produced on macOS arm64, so the output is identical across those two operating systems.
 - Image `sha256:890e903e…`, about 590 MB.
 
-**Not yet covered.** An x86-64 host. On an Apple-silicon Mac, `docker build --platform linux/amd64` would run under emulation; run it before submission if time allows.
+**x86-64, 2026-10-07.** The GitHub Actions `ci` workflow (ubuntu-latest, x86-64, Rust 1.95.0) runs `./reproduce.sh` on every push. Run [37595319651](https://github.com/fexx301/rehearse/actions/runs/37595319651) passed: both reports byte-identical. So the committed output reproduces on macOS arm64, Linux arm64 and Linux x86-64.
 
 ## G7: honest README
 
