@@ -399,4 +399,22 @@ mod tests {
         assert_ne!(base.steps[4].auths, cand.steps[4].auths);
         assert!(cand.steps[4].auths[0].ends_with(".transfer(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)"));
     }
+
+    #[test]
+    fn events_are_recorded_per_call_and_a_swapped_event_shows() {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../examples/events");
+        let manifest = Manifest::load(&dir.join("manifest.json")).unwrap();
+        let snap = LedgerSnapshot::read_file(dir.join("capture/snapshot.json")).unwrap();
+        let contract = ScAddress::from_str(&manifest.contract).unwrap();
+        let base = run(snap.clone(), &manifest, "baseline").unwrap();
+        let only_transfer: Vec<usize> = base.steps.iter().enumerate().filter(|(_, s)| !s.events.is_empty()).map(|(i, _)| i).collect();
+        assert_eq!(only_transfer, vec![2], "only the transfer emits");
+        assert!(base.steps[2].events[0].contains("[transfer, GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3, GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI]"));
+        let wasm = std::fs::read(demo("wasm/token-events-v2-swapped.wasm")).unwrap();
+        let cand = run(with_candidate(&snap, &contract, &wasm).unwrap(), &manifest, "v2-swapped").unwrap();
+        for (b, c) in base.steps.iter().zip(&cand.steps) {
+            assert_eq!(b.result, c.result, "{}", b.label);
+        }
+        assert!(cand.steps[2].events[0].contains("[transfer, GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI, GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3]"));
+    }
 }

@@ -1314,6 +1314,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rehearse-demo-token-events-v1"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "rehearse-demo-token-events-v2-swapped"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "rehearse-demo-token-v1"
 version = "0.0.0"
 dependencies = [

@@ -1,0 +1,82 @@
+{
+  "closure_candidates": [
+    {
+      "label": "v2-swapped",
+      "wasm_sha256": "565e76a51119a469503fe3131601b22d026335556dca5a0d8a78600ac94fa900"
+    }
+  ],
+  "closure_rounds": [
+    {
+      "added": [
+        {
+          "key": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+          "read_by": "baseline"
+        }
+      ],
+      "keys": 6,
+      "ledger": 5070642,
+      "round": 1
+    },
+    {
+      "added": [],
+      "keys": 7,
+      "ledger": 5070643,
+      "round": 2
+    }
+  ],
+  "contract": "CDPWRTCRXSBC56KLVRHGALWH24NVG67Q2VHACXEP2OLLX4OBM5J2FDED",
+  "deployed_wasm_sha256": "3a11cfd64d98c0ad3c8ef7b619332f055e04bff5f89c928aa1c888eba62351b1",
+  "keys_captured": [
+    "CDPWRTCRXSBC56KLVRHGALWH24NVG67Q2VHACXEP2OLLX4OBM5J2FDED persistent Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+    "CDPWRTCRXSBC56KLVRHGALWH24NVG67Q2VHACXEP2OLLX4OBM5J2FDED persistent Balance(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+    "CDPWRTCRXSBC56KLVRHGALWH24NVG67Q2VHACXEP2OLLX4OBM5J2FDED persistent instance",
+    "code 3a11cfd64d98c0ad3c8ef7b619332f055e04bff5f89c928aa1c888eba62351b1"
+  ],
+  "keys_verified_absent": [
+    "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 559357522667343250 })",
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })"
+  ],
+  "keys_verified_absent_xdr": [
+    "AAAAAAAAAAA7Tb1aTkDvO5zanYKMi25YLyMAZs6BsXGX29jPUZEjKA==",
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVB8M8tAkHjZIAAAAA",
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVCyEDby6XMK4AAAAA"
+  ],
+  "ledger": 5070643,
+  "ledger_close_time": 1791376802,
+  "network": "testnet",
+  "network_passphrase": "Test SDF Network ; September 2015",
+  "protocol": 29,
+  "rpc": "https://soroban-testnet.stellar.org",
+  "simulation_source": "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T",
+  "simulations": [
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070641,
+      "step": "holder A balance"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070641,
+      "step": "holder B balance"
+    },
+    {
+      "footprint_keys": 6,
+      "simulated_at_ledger": 5070641,
+      "step": "A sends 100 RHE to B"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070642,
+      "step": "holder A balance after"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070642,
+      "step": "holder B balance after"
+    }
+  ],
+  "snapshot_sha256": "94d5a09b8b5b11a7a0d2aaf19ea2dfef111a97d1d2328d0d582bdb307d425ef7",
+  "tool": "rehearse 0.1.0",
+  "ttl_configuration": "SDK default state-archival settings, not the network's"
+}

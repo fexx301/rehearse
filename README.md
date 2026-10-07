@@ -44,7 +44,7 @@ Rehearse flags it anyway. During replay it records every authorization each call
 | deployed | `GA5U… authorizes transfer(GA5U…, GAA4…, 1000000000)` |
 | v2-authscope | `GA5U… authorizes transfer(GAA4…)` |
 
-Contract events are compared the same way, on every call where both versions succeed.
+Contract events are compared the same way, on every call where both versions succeed. In [`examples/events`](examples/events) ([live report](https://fexx301.github.io/rehearse/examples/events/report.html)), a candidate publishes its `transfer` event with `from` and `to` swapped. Balances still move correctly and every result matches, but anything reading the event would record the money going the wrong way. Rehearse flags the event difference.
 
 ## On a contract we didn't write
 
@@ -152,12 +152,12 @@ Rehearse builds on ideas that already exist, and credits them:
 
 ```
 cli/              the rehearse CLI (capture, replay, render)
-demo/contracts/   token v1 and three candidates (compatible, broken, authscope), with one shared test suite
+demo/contracts/   token v1 and its candidates (compatible, broken, authscope), plus the events token and its swapped-event candidate, all sharing one test suite
 demo/wasm/        the built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
 demo/upgrade/     the proposed upgrade the pull-request check replays
-examples/         the authorization check, and real-world runs (Blend's lending pool on testnet and mainnet)
+examples/         the authorization and event checks, and real-world runs (Blend's lending pool on testnet and mainnet)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check

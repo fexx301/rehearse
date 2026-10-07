@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["token-v1", "token-v2-compatible", "token-v2-broken", "token-v2-authscope"]
+members = ["token-v1", "token-v2-compatible", "token-v2-broken", "token-v2-authscope", "token-events-v1", "token-events-v2-swapped"]
 
 [workspace.dependencies]
 soroban-sdk = "=28.0.0"
