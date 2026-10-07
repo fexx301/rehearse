@@ -1,0 +1,13 @@
+{
+  "description": "Read-only health check of Blend's testnet lending pool (TestnetV2): pool config, admin, reserve list, and the USDC and XLM reserves.",
+  "network": "testnet",
+  "rpc": "https://soroban-testnet.stellar.org",
+  "contract": "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
+  "steps": [
+    { "label": "pool config", "call": "get_config", "args": [] },
+    { "label": "pool admin", "call": "get_admin", "args": [] },
+    { "label": "reserve list", "call": "get_reserve_list", "args": [] },
+    { "label": "USDC reserve", "call": "get_reserve", "args": [{ "address": "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU" }] },
+    { "label": "XLM reserve", "call": "get_reserve", "args": [{ "address": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" }] }
+  ]
+}

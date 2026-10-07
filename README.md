@@ -27,6 +27,10 @@ One caveat: the variant names still appear as plain strings in the Wasm data sec
 
 Open [`demo/report.html`](demo/report.html) to see the full report.
 
+## On a contract we didn't write
+
+[`examples/blend-pool`](examples/blend-pool) runs Rehearse read-only against Blend's testnet lending pool, a production protocol built with soroban-sdk 22. Its deployed code is byte-identical to Blend's published v2.0.0 release. Two builds from Blend's own history were replayed as candidates: v2.0.0 rebuilt from source, and the commit before their flash-loan fix. All five pool reads were identical across all three versions, with nothing read outside the capture. The offline baseline also matched the live network, except for interest that accrues with time. That example is also why the comparison is narrow: the fix only touches flash loans, which those reads never exercise.
+
 ## Reproduce it
 
 Everything needed to regenerate the demo report is committed: the captured snapshot, the three Wasm builds and the manifest. Replay makes no network calls.
@@ -125,6 +129,7 @@ reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check
 demo/upgrade/     the proposed upgrade the pull-request check replays
+examples/         real-world runs (Blend's testnet pool)
 GATES.md          validation log: what was tested, how, and the results
 ```
 

@@ -84,7 +84,7 @@ RESULT CAZVNRBBQAUZI4KZFYRKQUGI53PPDEHCUGSDWQ5G4HHAQ6CFXSMPGILB.balance() -> err
 **Result: pass.** Inside a macOS sandbox profile that denies every network operation (checked first: `curl` to the testnet RPC fails to connect under the same profile), the script:
 - built the CLI with `cargo build --release --locked --offline`,
 - replayed the committed capture against both candidates,
-- produced `report.json` and `report.html`, both byte-identical to the committed copies: SHA-256 `e1882aff…` (JSON) and `90773bd1…` (HTML, after the design rework).
+- produced `report.json` and `report.html`, both byte-identical to the committed copies: SHA-256 `e1882aff…` (JSON) and `944d4c09…` (HTML, current renderer).
 
 Re-run after the manifest gained display units and the HTML step was added.
 

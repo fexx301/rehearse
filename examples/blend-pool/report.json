@@ -1,0 +1,234 @@
+{
+  "baseline": {
+    "expectation_failures": [],
+    "label": "baseline (deployed)",
+    "reads_outside_capture": [],
+    "status": "ok",
+    "steps": [
+      {
+        "args": [],
+        "call": "get_config",
+        "failed": false,
+        "label": "pool config",
+        "result": "{bstop_rate: 1000000, max_positions: 8, min_collateral: 0, oracle: CAZOKR2Y5E2OSWSIBRVZMJ47RUTQPIGVWSAQ2UISGAVC46XKPGDG5PKI, status: 0}"
+      },
+      {
+        "args": [],
+        "call": "get_admin",
+        "failed": false,
+        "label": "pool admin",
+        "result": "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+      },
+      {
+        "args": [],
+        "call": "get_reserve_list",
+        "failed": false,
+        "label": "reserve list",
+        "result": "[CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, CAZAQB3D7KSLSNOSQKYD2V4JP5V2Y3B4RDJZRLBFCCIXDCTE3WHSY3UE, CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI, CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU]"
+      },
+      {
+        "args": [
+          "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU"
+        ],
+        "call": "get_reserve",
+        "failed": false,
+        "label": "USDC reserve",
+        "result": "{asset: CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU, config: {c_factor: 9500000, decimals: 7, enabled: true, index: 3, l_factor: 9500000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 1000000, reactivity: 20, supply_cap: 170141183460469231731687303715884105727, util: 7000000}, data: {b_rate: 1057314860557, b_supply: 1233368977018, backstop_credit: 1574686724, d_rate: 1071357290486, d_supply: 951429203058, ir_mod: 5480841, last_time: 1791363367}, scalar: 10000000}"
+      },
+      {
+        "args": [
+          "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+        ],
+        "call": "get_reserve",
+        "failed": false,
+        "label": "XLM reserve",
+        "result": "{asset: CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, config: {c_factor: 9000000, decimals: 7, enabled: true, index: 0, l_factor: 9000000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 2000000, reactivity: 50, supply_cap: 170141183460469231731687303715884105727, util: 5000000}, data: {b_rate: 2251912913667, b_supply: 525993715297220, backstop_credit: 17141260548559, d_rate: 2962262387290, d_supply: 368418737942303, ir_mod: 100000000, last_time: 1791363367}, scalar: 10000000}"
+      }
+    ],
+    "wasm_sha256": "a41fc53d6753b6c04eb15b021c55052366a4c8e0e21bc72700f461264ec1350e"
+  },
+  "candidates": [
+    {
+      "label": "v2.0.0-rebuild",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "no observed difference",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [],
+          "call": "get_config",
+          "failed": false,
+          "label": "pool config",
+          "result": "{bstop_rate: 1000000, max_positions: 8, min_collateral: 0, oracle: CAZOKR2Y5E2OSWSIBRVZMJ47RUTQPIGVWSAQ2UISGAVC46XKPGDG5PKI, status: 0}"
+        },
+        {
+          "args": [],
+          "call": "get_admin",
+          "failed": false,
+          "label": "pool admin",
+          "result": "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        },
+        {
+          "args": [],
+          "call": "get_reserve_list",
+          "failed": false,
+          "label": "reserve list",
+          "result": "[CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, CAZAQB3D7KSLSNOSQKYD2V4JP5V2Y3B4RDJZRLBFCCIXDCTE3WHSY3UE, CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI, CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU]"
+        },
+        {
+          "args": [
+            "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU"
+          ],
+          "call": "get_reserve",
+          "failed": false,
+          "label": "USDC reserve",
+          "result": "{asset: CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU, config: {c_factor: 9500000, decimals: 7, enabled: true, index: 3, l_factor: 9500000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 1000000, reactivity: 20, supply_cap: 170141183460469231731687303715884105727, util: 7000000}, data: {b_rate: 1057314860557, b_supply: 1233368977018, backstop_credit: 1574686724, d_rate: 1071357290486, d_supply: 951429203058, ir_mod: 5480841, last_time: 1791363367}, scalar: 10000000}"
+        },
+        {
+          "args": [
+            "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+          ],
+          "call": "get_reserve",
+          "failed": false,
+          "label": "XLM reserve",
+          "result": "{asset: CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, config: {c_factor: 9000000, decimals: 7, enabled: true, index: 0, l_factor: 9000000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 2000000, reactivity: 50, supply_cap: 170141183460469231731687303715884105727, util: 5000000}, data: {b_rate: 2251912913667, b_supply: 525993715297220, backstop_credit: 17141260548559, d_rate: 2962262387290, d_supply: 368418737942303, ir_mod: 100000000, last_time: 1791363367}, scalar: 10000000}"
+        }
+      ],
+      "wasm_sha256": "5d2baf1c5e1adff345ae54c4d63cb7f9aa7ff067ca86ce82f51efa1f9254f581"
+    },
+    {
+      "label": "pre-fix-96ecace",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "no observed difference",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [],
+          "call": "get_config",
+          "failed": false,
+          "label": "pool config",
+          "result": "{bstop_rate: 1000000, max_positions: 8, min_collateral: 0, oracle: CAZOKR2Y5E2OSWSIBRVZMJ47RUTQPIGVWSAQ2UISGAVC46XKPGDG5PKI, status: 0}"
+        },
+        {
+          "args": [],
+          "call": "get_admin",
+          "failed": false,
+          "label": "pool admin",
+          "result": "GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56"
+        },
+        {
+          "args": [],
+          "call": "get_reserve_list",
+          "failed": false,
+          "label": "reserve list",
+          "result": "[CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, CAZAQB3D7KSLSNOSQKYD2V4JP5V2Y3B4RDJZRLBFCCIXDCTE3WHSY3UE, CAP5AMC2OHNVREO66DFIN6DHJMPOBAJ2KCDDIMFBR7WWJH5RZBFM3UEI, CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU]"
+        },
+        {
+          "args": [
+            "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU"
+          ],
+          "call": "get_reserve",
+          "failed": false,
+          "label": "USDC reserve",
+          "result": "{asset: CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU, config: {c_factor: 9500000, decimals: 7, enabled: true, index: 3, l_factor: 9500000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 1000000, reactivity: 20, supply_cap: 170141183460469231731687303715884105727, util: 7000000}, data: {b_rate: 1057314860557, b_supply: 1233368977018, backstop_credit: 1574686724, d_rate: 1071357290486, d_supply: 951429203058, ir_mod: 5480841, last_time: 1791363367}, scalar: 10000000}"
+        },
+        {
+          "args": [
+            "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+          ],
+          "call": "get_reserve",
+          "failed": false,
+          "label": "XLM reserve",
+          "result": "{asset: CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC, config: {c_factor: 9000000, decimals: 7, enabled: true, index: 0, l_factor: 9000000, max_util: 9500000, r_base: 5000, r_one: 300000, r_three: 10000000, r_two: 2000000, reactivity: 50, supply_cap: 170141183460469231731687303715884105727, util: 5000000}, data: {b_rate: 2251912913667, b_supply: 525993715297220, backstop_credit: 17141260548559, d_rate: 2962262387290, d_supply: 368418737942303, ir_mod: 100000000, last_time: 1791363367}, scalar: 10000000}"
+        }
+      ],
+      "wasm_sha256": "23dfd7eb3cb8f497eac5927e7b95a91047f4dbde4d322fbb4cce9b4f570635d3"
+    }
+  ],
+  "capture": {
+    "contract": "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
+    "deployed_wasm_sha256": "a41fc53d6753b6c04eb15b021c55052366a4c8e0e21bc72700f461264ec1350e",
+    "keys_captured": [
+      "code a41fc53d6753b6c04eb15b021c55052366a4c8e0e21bc72700f461264ec1350e",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent ResList",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent ResData(CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU)",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent ResData(CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent ResConfig(CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU)",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent ResConfig(CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC)",
+      "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF persistent instance"
+    ],
+    "keys_verified_absent": [],
+    "ledger": 5067956,
+    "ledger_close_time": 1791363367,
+    "network": "testnet",
+    "protocol": 29,
+    "snapshot_sha256": "5043bf2f916fa0f9173fce727c7fa79cff91d3ee41b3841dfc9dd6220ff32c35"
+  },
+  "claim": "Observed differences for the listed calls on the captured state. Not a safety certification.",
+  "manifest": {
+    "contract": "CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF",
+    "description": "Read-only health check of Blend's testnet lending pool (TestnetV2): pool config, admin, reserve list, and the USDC and XLM reserves.",
+    "network": "testnet",
+    "rpc": "https://soroban-testnet.stellar.org",
+    "steps": [
+      {
+        "args": [],
+        "call": "get_config",
+        "label": "pool config"
+      },
+      {
+        "args": [],
+        "call": "get_admin",
+        "label": "pool admin"
+      },
+      {
+        "args": [],
+        "call": "get_reserve_list",
+        "label": "reserve list"
+      },
+      {
+        "args": [
+          {
+            "address": "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU"
+          }
+        ],
+        "call": "get_reserve",
+        "label": "USDC reserve"
+      },
+      {
+        "args": [
+          {
+            "address": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC"
+          }
+        ],
+        "call": "get_reserve",
+        "label": "XLM reserve"
+      }
+    ]
+  },
+  "runtime": {
+    "auth_mocked": true,
+    "network_calls_during_replay": false,
+    "soroban_env_host": "28.0.2 with experimental `next` feature",
+    "soroban_sdk": "28.0.0"
+  },
+  "summary": [
+    {
+      "candidate": "v2.0.0-rebuild",
+      "state_differences": 0,
+      "status": "no observed difference",
+      "step_differences": 0
+    },
+    {
+      "candidate": "pre-fix-96ecace",
+      "state_differences": 0,
+      "status": "no observed difference",
+      "step_differences": 0
+    }
+  ],
+  "tool": "rehearse 0.1.0"
+}

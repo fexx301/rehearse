@@ -75,6 +75,8 @@ h1, h2, h3 { font-family: var(--font-display); font-style: normal; margin: 0; co
 .wordmark { font: 700 var(--text-lg)/1 var(--font-display); color: var(--color-band-ink); letter-spacing: -0.02em; }
 .wordmark span { color: var(--color-band-accent); }
 .bar b { color: var(--color-band-ink); font-weight: 500; }
+.hero.solo { grid-template-columns: minmax(0, 1fr); }
+.hero.solo .lede, .hero.solo .tally { max-width: 52rem; }
 .hero { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: var(--space-2xl);
   padding-block: var(--space-2xl) var(--space-2xl); align-items: start; }
 .hero h1 { color: var(--color-band-ink); font-size: var(--text-display); font-weight: 600; line-height: 1.02;
@@ -138,6 +140,11 @@ col.idx { width: 3rem; } col.call { width: 34%; }
 tbody th { font-weight: 500; color: var(--color-ink); }
 tbody th small { display: block; margin-top: 0.15rem; font: 400 var(--text-xs)/1.4 var(--font-mono); color: var(--color-muted); overflow-wrap: anywhere; }
 .num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+td.long { text-align: left; white-space: normal; font-size: var(--text-xs); line-height: 1.6; }
+td.all-same { color: var(--color-muted); }
+td.all-same summary { cursor: pointer; font: 500 var(--text-sm)/1.4 var(--font-body); color: var(--color-ok); }
+td.all-same summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+td.all-same code { display: block; margin-top: var(--space-xs); font-size: var(--text-xs); line-height: 1.6; color: var(--color-ink-2); overflow-wrap: anywhere; }
 td.diff { background: var(--color-danger-soft); color: var(--color-danger); font-weight: 700;
   box-shadow: inset 3px 0 0 var(--color-danger); }
 td small.why { white-space: nowrap; }
@@ -376,6 +383,7 @@ pub fn render(report: &Value) -> String {
     let ledger_fmt = group(cap["ledger"].as_u64().unwrap_or(0));
     let diverged: Vec<&Value> = cands.iter().copied().filter(|c| s(c, "status") == "diverged").collect();
     let base_short = short_label(s(base, "label"));
+    let has_figure = units.as_ref().is_some_and(|u| steps.first().is_some_and(|st| u.calls.iter().any(|c| c == s(st, "call"))));
 
     let mut h = String::new();
     let _ = write!(h, r#"<!doctype html>
@@ -386,12 +394,13 @@ pub fn render(report: &Value) -> String {
 <div class="band"><div class="wrap">
 <header class="bar"><span class="wordmark">rehearse<span>.</span></span>
 <span>contract <b title="{contract}">{contract_short}</b></span><span>{network} ledger <b>{ledger_fmt}</b></span><span>protocol <b>{protocol}</b></span></header>
-<div class="hero"><div>
+<div class="hero{solo}"><div>
 "#,
         contract = esc(s(cap, "contract")),
         contract_short = esc(&short_keys(s(cap, "contract"))),
         network = esc(s(cap, "network")),
         protocol = cap["protocol"],
+        solo = if has_figure { "" } else { " solo" },
     );
 
     match diverged.as_slice() {
@@ -416,7 +425,11 @@ pub fn render(report: &Value) -> String {
         let word = if unverified { "unverified reads".to_string() } else { format!("of {n_steps} results changed") };
         let _ = write!(h, r#"<div class="{class}"><dt>{}</dt><dd><strong>{n}</strong>{word}</dd></div>"#, esc(s(c, "label")));
     }
-    h.push_str("</dl></div>\n");
+    h.push_str("</dl>");
+    if !has_figure {
+        let _ = write!(h, r#"<p class="claim">{}</p>"#, esc(s(report, "claim")));
+    }
+    h.push_str("</div>\n");
 
     // Figure: holder balances as every version reads them, before any write.
     let amount_steps: Vec<(usize, &Value)> = steps
@@ -472,8 +485,6 @@ pub fn render(report: &Value) -> String {
             h.push_str("</div></div>\n");
         }
         let _ = write!(h, r#"<p class="claim">{}</p></figure>"#, esc(s(report, "claim")));
-    } else {
-        let _ = write!(h, r#"<p class="claim">{}</p>"#, esc(s(report, "claim")));
     }
     h.push_str("</div></div></div>\n<main class=\"wrap\">\n");
 
@@ -496,20 +507,27 @@ pub fn render(report: &Value) -> String {
         let call = s(b, "call");
         let args: Vec<String> = arr(&b["args"]).iter().filter_map(|a| a.as_str()).map(short_keys).collect();
         let (bm, bs) = cell(&units, call, s(b, "result"));
-        let _ = write!(h, r#"<tr><td class="idx">{}</td><th scope="row">{}<small>{}({})</small></th><td class="num" data-v="{}">{}{}</td>"#,
-            i + 1, esc(&sentence(s(b, "label"))), esc(call), esc(&args.join(", ")), esc(base_short), esc(&bm),
+        let all_same = cands.iter().all(|c| s(&arr(&c["steps"])[i], "result") == s(b, "result"));
+        if all_same && bm.chars().count() > 48 {
+            let _ = write!(h, r#"<tr><td class="idx">{}</td><th scope="row">{}<small>{}({})</small></th><td class="all-same" colspan="{}" data-v="all versions"><details><summary>Identical in all {} versions</summary><code>{}</code></details></td></tr>
+"#, i + 1, esc(&sentence(s(b, "label"))), esc(call), esc(&args.join(", ")), cands.len() + 1, cands.len() + 1, esc(&short_keys(&bm)));
+            continue;
+        }
+        let long = |m: &str| if m.chars().count() > 48 { " long" } else { "" };
+        let _ = write!(h, r#"<tr><td class="idx">{}</td><th scope="row">{}<small>{}({})</small></th><td class="num{}" data-v="{}">{}{}</td>"#,
+            i + 1, esc(&sentence(s(b, "label"))), esc(call), esc(&args.join(", ")), long(&bm), esc(base_short), esc(&short_keys(&bm)),
             bs.map(|x| format!(r#"<small class="why">{}</small>"#, esc(&x))).unwrap_or_default());
         for c in cands {
             let r = s(&arr(&c["steps"])[i], "result");
             let (m, sub) = cell(&units, call, r);
             if r == s(b, "result") {
-                let _ = write!(h, r#"<td class="num" data-v="{}">{}</td>"#, esc(s(c, "label")), esc(&m));
+                let _ = write!(h, r#"<td class="num{}" data-v="{}">{}</td>"#, long(&m), esc(s(c, "label")), esc(&short_keys(&m)));
             } else {
                 let second = match sub {
                     Some(x) => format!(r#"<small class="why">{}</small>"#, esc(&x)),
                     None => format!("<s>{}</s>", esc(&bm)),
                 };
-                let _ = write!(h, r#"<td class="num diff" data-v="{}">{}{second}</td>"#, esc(s(c, "label")), esc(&m));
+                let _ = write!(h, r#"<td class="num diff{}" data-v="{}">{}{second}</td>"#, long(&m), esc(s(c, "label")), esc(&short_keys(&m)));
             }
         }
         h.push_str("</tr>\n");
