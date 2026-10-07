@@ -80,9 +80,13 @@ rehearse capture --manifest manifest.json --source G… --out capture \
 
 # Offline from here on.
 rehearse replay --manifest manifest.json --capture capture \
-  --candidate v2=path/to/candidate.wasm --out report.json
+  --candidate v2=path/to/candidate.wasm --out report.json [--fail-on-divergence]
 rehearse render --report report.json --out report.html
 ```
+
+### In CI
+
+`replay --fail-on-divergence` exits **2** when any candidate differs from the deployed contract (or reads state outside the capture), **0** when none do, and **1** on errors. [`.github/workflows/upgrade-check.yml`](.github/workflows/upgrade-check.yml) uses it to block a pull request whose proposed upgrade, `demo/upgrade/candidate.wasm`, changes what the workflow observes. It writes a per-step table to the job summary and attaches the HTML report. To use it in your own repo, copy the file and point it at your manifest, committed capture and built Wasm.
 
 ### How capture decides what to save
 
@@ -119,6 +123,8 @@ demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
+.github/          CI (reproduction + exit codes) and the pull-request upgrade check
+demo/upgrade/     the proposed upgrade the pull-request check replays
 GATES.md          validation log: what was tested, how, and the results
 ```
 

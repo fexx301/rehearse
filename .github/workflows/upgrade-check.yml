@@ -1,0 +1,58 @@
+# Blocks a pull request whose proposed upgrade changes what the demo workflow observes.
+#
+# The proposed Wasm lives at demo/upgrade/candidate.wasm. Rehearse replays the manifest
+# against the committed testnet capture, once on the deployed code and once on the
+# candidate, and fails the check if any result or storage entry differs.
+# Copy this file into your own repo and point it at your manifest, capture and build.
+name: upgrade check
+
+on:
+  pull_request:
+    paths:
+      - demo/upgrade/**
+      - demo/manifest.json
+      - demo/capture/**
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust 1.95
+        run: rustup toolchain install 1.95.0 --profile minimal && rustup default 1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+      - name: Build rehearse
+        run: cargo build --release --locked --manifest-path cli/Cargo.toml
+      - name: Rehearse the upgrade on captured state
+        run: |
+          cli/target/release/rehearse replay \
+            --manifest demo/manifest.json \
+            --capture demo/capture \
+            --candidate proposed=demo/upgrade/candidate.wasm \
+            --out report.json \
+            --fail-on-divergence
+      - name: Render the report
+        if: always()
+        run: |
+          test -f report.json || exit 0
+          cli/target/release/rehearse render --report report.json --out report.html
+          {
+            echo "### Rehearse: proposed upgrade"
+            echo
+            jq -r '.summary[] | "**\(.candidate)**: \(.status) (\(.step_differences) of '"$(jq '.manifest.steps | length' report.json)"' results changed)"' report.json
+            echo
+            echo "| Step | Deployed | Proposed |"
+            echo "|---|---|---|"
+            jq -r '.baseline.steps as $b | .candidates[0].steps | to_entries[] | "| \($b[.key].label) | `\($b[.key].result)` | `\(.value.result)`\(if .value.result != $b[.key].result then " ❌" else "" end) |"' report.json
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rehearse-report
+          path: |
+            report.json
+            report.html
+          if-no-files-found: ignore

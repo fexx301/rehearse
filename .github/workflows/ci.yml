@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust 1.95
+        run: rustup toolchain install 1.95.0 --profile minimal && rustup default 1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli
+      - name: Reproduce the demo report byte for byte
+        run: ./reproduce.sh
+      - name: Exit codes for --fail-on-divergence
+        run: |
+          R=cli/target/release/rehearse
+          args=(--manifest demo/manifest.json --capture demo/capture)
+          "$R" replay "${args[@]}" --candidate ok=demo/wasm/token-v2-compatible.wasm --out /tmp/ok.json --fail-on-divergence
+          set +e
+          "$R" replay "${args[@]}" --candidate bad=demo/wasm/token-v2-broken.wasm --out /tmp/bad.json --fail-on-divergence
+          code=$?
+          set -e
+          test "$code" -eq 2 || { echo "expected exit 2 for a diverging candidate, got $code"; exit 1; }

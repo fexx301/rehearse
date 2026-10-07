@@ -2,7 +2,7 @@
 //! on captured ledger state, before upgrading.
 //!
 //!   rehearse capture --manifest M --source G... --out DIR [--candidate LABEL=WASM]...
-//!   rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM...
+//!   rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence]
 mod capture;
 mod fmt;
 mod manifest;
@@ -17,7 +17,7 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 
 const USAGE: &str = "usage:
   rehearse capture --manifest M --source G... --out DIR [--candidate LABEL=WASM]...
-  rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM...
+  rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence]
   rehearse render  --report REPORT.json --out REPORT.html";
 
 struct Args {
@@ -27,10 +27,11 @@ struct Args {
     capture: Option<PathBuf>,
     report: Option<PathBuf>,
     candidates: Vec<(String, PathBuf)>,
+    fail_on_divergence: bool,
 }
 
 fn parse(rest: &[String]) -> Result<Args, String> {
-    let mut a = Args { manifest: None, source: None, out: None, capture: None, report: None, candidates: vec![] };
+    let mut a = Args { manifest: None, source: None, out: None, capture: None, report: None, candidates: vec![], fail_on_divergence: false };
     let mut it = rest.iter();
     while let Some(flag) = it.next() {
         let mut value = || it.next().cloned().ok_or(format!("{flag} needs a value"));
@@ -40,6 +41,7 @@ fn parse(rest: &[String]) -> Result<Args, String> {
             "--out" => a.out = Some(value()?.into()),
             "--capture" => a.capture = Some(value()?.into()),
             "--report" => a.report = Some(value()?.into()),
+            "--fail-on-divergence" => a.fail_on_divergence = true,
             "--candidate" => {
                 let v = value()?;
                 let (label, path) = v.split_once('=').ok_or("--candidate takes LABEL=WASM")?;
@@ -89,6 +91,7 @@ fn main() {
 }
 
 fn replay_cmd(a: Args) -> Result<(), String> {
+    let fail_on_divergence = a.fail_on_divergence;
     let manifest = Manifest::load(a.manifest.as_ref().ok_or("--manifest is required")?)?;
     let dir = a.capture.ok_or("--capture is required")?;
     let out = a.out.ok_or("--out is required")?;
@@ -226,6 +229,19 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         println!("{}: {}", s["candidate"].as_str().unwrap_or(""), s["status"].as_str().unwrap_or(""));
     }
     println!("Report written to {}", out.display());
+    // For CI: exit 2 when any candidate is not "no observed difference" (diverged, or read
+    // state outside the capture). Exit 1 stays reserved for errors.
+    if fail_on_divergence {
+        let failing: Vec<&str> = summary
+            .iter()
+            .filter(|s| s["status"] != "no observed difference")
+            .filter_map(|s| s["candidate"].as_str())
+            .collect();
+        if !failing.is_empty() {
+            eprintln!("rehearse: --fail-on-divergence: {} did not match the deployed contract", failing.join(", "));
+            std::process::exit(2);
+        }
+    }
     Ok(())
 }
 
