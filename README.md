@@ -1,14 +1,20 @@
 # Rehearse
 
-Replay a Soroban contract's real workflow against candidate Wasm, on ledger state captured from the network, before you upgrade.
+[![ci](https://github.com/fexx301/rehearse/actions/workflows/ci.yml/badge.svg)](https://github.com/fexx301/rehearse/actions/workflows/ci.yml)
+
+Replay a Stellar smart contract's real workflow against candidate Wasm, on ledger state captured from the network, before you upgrade.
+
+**See it:** [live demo report](https://fexx301.github.io/rehearse/demo/report.html) · [a pull request blocked by the upgrade check](https://github.com/fexx301/rehearse/pull/1) · [a run on Blend's lending pool](https://fexx301.github.io/rehearse/examples/blend-pool/report.html)
 
 ![Rehearse report: upgrading to v2-broken changes 7 of 8 results](docs/report-hero.png)
 
-An upgrade keeps the contract address and every stored entry, and swaps only the code. Unit tests start from an empty ledger, so they never see the state your holders actually have. Rehearse does:
+On Soroban, Stellar's smart contract platform, an upgrade keeps the contract address and every stored entry, and swaps only the code. Unit tests start from an empty ledger, so they never see the state your holders actually have. Rehearse does:
 
 1. **Capture** the ledger entries a workflow touches, all read at one ledger.
 2. **Replay** the same calls offline: once with the deployed code, once with each candidate, each run in its own copy of that state.
 3. **Report** every call whose return value differs and every storage entry that ends differently, as JSON and as a single offline HTML page.
+
+It is for teams upgrading Soroban contracts that already hold state, such as tokens, vaults and lending pools. Run it before calling `upgrade`, or in CI on every pull request that changes the Wasm.
 
 What it tells you is narrow on purpose: *the observed differences for the calls you listed, on the state you captured.* It is not a safety certification, and a clean report does not mean an upgrade is safe.
 
@@ -25,11 +31,16 @@ The broken build gets past the checks most teams run before an upgrade. Its test
 
 One caveat: the variant names still appear as plain strings in the Wasm data section. The rename is invisible to a spec diff, not to every possible static check.
 
-See the full report live at **[fexx301.github.io/rehearse/demo/report.html](https://fexx301.github.io/rehearse/demo/report.html)** (the same file as [`demo/report.html`](demo/report.html)).
+Full report: [live](https://fexx301.github.io/rehearse/demo/report.html), or [`demo/report.html`](demo/report.html) in the repo.
 
 ## On a contract we didn't write
 
-[`examples/blend-pool`](examples/blend-pool) ([live report](https://fexx301.github.io/rehearse/examples/blend-pool/report.html)) runs Rehearse read-only against Blend's testnet lending pool, a production protocol built with soroban-sdk 22. Its deployed code is byte-identical to Blend's published v2.0.0 release. Two builds from Blend's own history were replayed as candidates: v2.0.0 rebuilt from source, and the commit before their flash-loan fix. All five pool reads were identical across all three versions, with nothing read outside the capture. The offline baseline also matched the live network, except for interest that accrues with time. That example is also why the comparison is narrow: the fix only touches flash loans, which those reads never exercise.
+[`examples/blend-pool`](examples/blend-pool) ([live report](https://fexx301.github.io/rehearse/examples/blend-pool/report.html)) runs Rehearse read-only against Blend's testnet lending pool, a production protocol built with soroban-sdk 22. Its deployed code is byte-identical to Blend's published v2.0.0 release.
+
+- **Candidates:** two builds from Blend's own history, v2.0.0 rebuilt from source and the commit before their flash-loan fix.
+- **Result:** all five pool reads were identical across all three versions, with nothing read outside the capture.
+- **Fidelity:** the offline baseline matched the live network, except for interest that accrues with time.
+- **Why that's the right answer:** the fix only touches flash loans, which those reads never exercise. Rehearse compares the calls you list, nothing more.
 
 ## Reproduce it
 
@@ -108,6 +119,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 - **Only what you list.** Calls not in the manifest, events, and fee and resource costs are not compared.
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
 - **One ledger.** A capture is a point-in-time copy. Recapture before relying on an old report.
+- **Testnet only, so far.** Capture has been run against testnet. Mainnet capture uses the same read-only RPC calls and should work, but it is untested.
 
 ## Related tools
 
@@ -125,11 +137,11 @@ demo/contracts/   token v1, v2-compatible and v2-broken, with one shared test su
 demo/wasm/        the three built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
+demo/upgrade/     the proposed upgrade the pull-request check replays
+examples/         real-world runs (Blend's testnet pool)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check
-demo/upgrade/     the proposed upgrade the pull-request check replays
-examples/         real-world runs (Blend's testnet pool)
 GATES.md          validation log: what was tested, how, and the results
 ```
 
