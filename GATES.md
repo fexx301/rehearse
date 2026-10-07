@@ -144,3 +144,10 @@ Each was added behind the same gates: the demo reports stay byte-identical, CI i
 **Still not checked.** Real users' keys, and smart-wallet accounts (`__check_auth`): each wallet verifies signatures its own way, so calls that need one are listed as unchecked. The signed check shows whether signatures of the deployed contract's requests still verify on a candidate, not that a candidate checks authorization; the requirement comparison covers that.
 
 **Also in this batch.** The `update_current_contract_wasm` deprecation warning is silenced with `#[allow(deprecated)]`; all Wasm hashes are unchanged.
+
+## Release and GitHub Action (2026-10-07)
+
+[v0.1.0](https://github.com/fexx301/rehearse/releases/tag/v0.1.0) ships prebuilt binaries for macOS (arm64, x86-64) and Linux (x86-64, arm64), each with a SHA-256 file. They are built by [`release.yml`](.github/workflows/release.yml).
+- **The action:** the same workflow then ran [`action.yml`](action.yml) on Linux and macOS against the published binaries. It asserted that the action installed the release (not a source build), that the compatible upgrade exits 0, and that the broken one exits 2 with the HTML report written.
+- **The README one-liner:** installing from the release on an Apple-silicon Mac, the archive matched its SHA-256 file, and the binary reproduced the demo `report.json` byte for byte (`e1882aff…`).
+- **The Intel macOS build:** run under Rosetta, it produced the same `report.json` and `report.html` bytes.
