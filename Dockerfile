@@ -21,6 +21,7 @@ RUN cargo build --release --locked --manifest-path cli/Cargo.toml
 COPY demo/manifest.json demo/report.json demo/report.html demo/
 COPY demo/capture demo/capture
 COPY demo/wasm demo/wasm
+COPY examples examples
 COPY reproduce.sh .
 
 ENV OFFLINE=1

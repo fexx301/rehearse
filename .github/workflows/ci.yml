@@ -19,7 +19,7 @@ jobs:
             demo/contracts
       - name: CLI unit and integration tests
         run: cargo test --locked --manifest-path cli/Cargo.toml
-      - name: Demo contract tests (all three builds share one suite)
+      - name: Demo contract tests (every build shares one suite)
         run: cargo test --locked --manifest-path demo/contracts/Cargo.toml
       - name: Reproduce the demo report byte for byte
         run: ./reproduce.sh

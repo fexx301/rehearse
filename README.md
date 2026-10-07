@@ -143,7 +143,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 
 ## Scope and limits
 
-- **Runtime.** `soroban-sdk` 28.0.0 and `soroban-env-host` 28.0.2 with the experimental `next` feature, which runs protocol-29 state. This is close to production behaviour but not exact protocol-29 parity. Tested with contracts built by soroban-sdk 28. State-archival settings in the snapshot use SDK defaults, not the network's.
+- **Runtime.** `soroban-sdk` 28.0.0 and `soroban-env-host` 28.0.2 with the experimental `next` feature, which runs protocol-29 state. This is close to production behaviour but not exact protocol-29 parity. Tested with contracts built by soroban-sdk 28 (the demo) and soroban-sdk 22 (Blend's pool, on testnet and mainnet). State-archival settings in the snapshot use SDK defaults, not the network's.
 - **Signatures are not checked.** Replay holds nobody's keys, so every `require_auth` is satisfied. What each call *requires* (address, function, arguments) is still recorded and compared. Signatures themselves, and custom account logic (`__check_auth`), are not run.
 - **Upgrade path is opt-in.** By default the candidate's code is swapped in directly. With an `upgrade` block, your contract's own upgrade function and migration calls run first. Authorization for them is mocked like everything else.
 - **Only what you list.** Calls not in the manifest, and fee and resource costs, are not compared.

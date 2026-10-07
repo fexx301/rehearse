@@ -227,6 +227,10 @@ table.changes td { font: 500 var(--text-xs)/1.6 var(--font-mono); overflow-wrap:
 table.changes td ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-xs); }
 table.changes td .none { color: var(--color-muted); font-family: var(--font-body); }
 table.changes td.diff { font-weight: 600; }
+@media (max-width: 600px) {
+  .stack.changes td { display: block; text-align: left; }
+  .stack.changes td::before { display: block; margin-bottom: 0.2rem; }
+}
 </style>"#;
 
 fn esc(s: &str) -> String {

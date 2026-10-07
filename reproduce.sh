@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Regenerate demo/report.json and demo/report.html from the committed capture and
-# Wasm, and check both match the committed copies byte for byte. Replay makes no
-# network calls.
+# Regenerate every report that has a committed capture (the demo, and the
+# authorization, event and upgrade-path examples) and check each matches the
+# committed copy byte for byte. Replay makes no network calls.
 #
 #   ./reproduce.sh            build (fetching crates if needed), replay, compare
 #   OFFLINE=1 ./reproduce.sh  build from the local crate cache only
@@ -14,23 +14,31 @@ cargo build --release --locked ${OFFLINE:+--offline} --manifest-path cli/Cargo.t
 
 out="$(mktemp -d)"
 trap 'rm -rf "$out"' EXIT
-cli/target/release/rehearse replay \
-  --manifest demo/manifest.json \
-  --capture demo/capture \
-  --candidate v2-compatible=demo/wasm/token-v2-compatible.wasm \
-  --candidate v2-broken=demo/wasm/token-v2-broken.wasm \
-  --out "$out/report.json"
-
-cli/target/release/rehearse render --report "$out/report.json" --out "$out/report.html"
-
+R=cli/target/release/rehearse
 status=0
-for f in report.json report.html; do
-  if cmp -s "$out/$f" "demo/$f"; then
-    echo "OK: $f is byte-identical to the committed copy ($(sha256 "demo/$f" | cut -c1-16)…)"
-  else
-    echo "MISMATCH: regenerated $f differs from demo/$f" >&2
-    diff "demo/$f" "$out/$f" | head -20 >&2 || true
-    status=1
-  fi
-done
+
+# check NAME DIR CANDIDATE...: replay DIR's committed capture, render, compare both reports.
+check() {
+  local name="$1" dir="$2"; shift 2
+  local args=()
+  for c in "$@"; do args+=(--candidate "$c"); done
+  mkdir -p "$out/$name"
+  "$R" replay --manifest "$dir/manifest.json" --capture "$dir/capture" "${args[@]}" --out "$out/$name/report.json" >/dev/null
+  "$R" render --report "$out/$name/report.json" --out "$out/$name/report.html" >/dev/null
+  for f in report.json report.html; do
+    if cmp -s "$out/$name/$f" "$dir/$f"; then
+      echo "OK: $dir/$f is byte-identical to the committed copy ($(sha256 "$dir/$f" | cut -c1-16)…)"
+    else
+      echo "MISMATCH: regenerated $dir/$f differs from the committed copy" >&2
+      diff "$dir/$f" "$out/$name/$f" | head -20 >&2 || true
+      status=1
+    fi
+  done
+}
+
+W=demo/wasm
+check demo         demo                  v2-compatible=$W/token-v2-compatible.wasm v2-broken=$W/token-v2-broken.wasm
+check auth-scope   examples/auth-scope   v2-compatible=$W/token-v2-compatible.wasm v2-authscope=$W/token-v2-authscope.wasm
+check events       examples/events       v2-swapped=$W/token-events-v2-swapped.wasm
+check upgrade-path examples/upgrade-path v2-compatible=$W/token-v2-compatible.wasm v2-broken=$W/token-v2-broken.wasm
 exit $status

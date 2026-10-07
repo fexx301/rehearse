@@ -23,13 +23,12 @@ fn help_and_version_exit_zero() {
     assert_eq!(bin().output().unwrap().status.code(), Some(1), "no arguments is an error");
 }
 
-#[test]
-fn a_failed_upgrade_fails_the_check() {
-    let dir = std::env::temp_dir().join(format!("rehearse-cli-{}", std::process::id()));
+fn replay_with_upgrade(name: &str, edit: impl Fn(&mut serde_json::Value)) -> (Option<i32>, serde_json::Value) {
+    let dir = std::env::temp_dir().join(format!("rehearse-cli-{}-{name}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let mut m: serde_json::Value =
         serde_json::from_slice(&std::fs::read(repo("examples/upgrade-path/manifest.json")).unwrap()).unwrap();
-    m["upgrade"]["call"] = "no_such_function".into();
+    edit(&mut m);
     let manifest = dir.join("manifest.json");
     std::fs::write(&manifest, serde_json::to_vec(&m).unwrap()).unwrap();
     let report = dir.join("report.json");
@@ -41,8 +40,31 @@ fn a_failed_upgrade_fails_the_check() {
         .arg("--fail-on-divergence")
         .output()
         .unwrap();
-    assert_eq!(out.status.code(), Some(2), "{}", String::from_utf8_lossy(&out.stderr));
     let r: serde_json::Value = serde_json::from_slice(&std::fs::read(&report).unwrap()).unwrap();
+    (out.status.code(), r)
+}
+
+#[test]
+fn a_failed_upgrade_fails_the_check() {
+    let (code, r) = replay_with_upgrade("upgrade", |m| m["upgrade"]["call"] = "no_such_function".into());
+    assert_eq!(code, Some(2));
     assert_eq!(r["candidates"][0]["status"], "upgrade failed");
     assert_eq!(r["candidates"][0]["installed_via_upgrade"]["candidate_code_installed"], false);
+}
+
+#[test]
+fn a_failed_migration_fails_the_check() {
+    let (code, r) = replay_with_upgrade("migrate", |m| {
+        m["upgrade"]["migrate"] = serde_json::json!([{"label": "migrate", "call": "no_such_migration", "args": []}]);
+    });
+    assert_eq!(code, Some(2));
+    assert_eq!(r["candidates"][0]["status"], "upgrade failed");
+    assert_eq!(r["candidates"][0]["installed_via_upgrade"]["migrate"][0]["failed"], true);
+}
+
+#[test]
+fn a_clean_upgrade_passes_the_check() {
+    let (code, r) = replay_with_upgrade("clean", |_| {});
+    assert_eq!(code, Some(0));
+    assert_eq!(r["candidates"][0]["status"], "no observed difference");
 }

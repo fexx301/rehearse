@@ -220,7 +220,11 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             .map(|(i, (b, x))| json!({"step": i + 1, "label": b.label, "baseline": b.events, "candidate": x.events}))
             .collect();
         let outside = uncaptured(c);
-        let upgrade_failed = c.upgrade.as_ref().is_some_and(|u| u.failed) || c.installed == Some(false);
+        // A failed upgrade call, a failed migration, or a contract still running other code all
+        // mean the workflow did not test the candidate as it would really be installed.
+        let upgrade_failed = c.upgrade.as_ref().is_some_and(|u| u.failed)
+            || c.migrate.iter().any(|m| m.failed)
+            || c.installed == Some(false);
         let status = if upgrade_failed {
             "upgrade failed"
         } else if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() {

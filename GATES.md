@@ -128,3 +128,17 @@ docker run --rm --network none rehearse:g6
 - **soroban-fork and ShippedLabs credited.** ShippedLabs' protocol 20–23 limit is stated with a date. Both gaps are described as closable by an upgrade, not presented as a moat.
 - **Limits listed:** mocked authorization, code replacement instead of the upgrade entrypoint, only the listed calls, a single ledger, cross-contract calls not exercised by the demo, and the data-section caveat on the rename.
 
+
+## Beyond return values: authorization, events, upgrade path (2026-10-07)
+
+Each was added behind the same gates: the demo reports stay byte-identical, CI is green, and every committed example reproduces byte for byte (`reproduce.sh` now checks the demo plus the three examples below, locally and in Docker).
+
+| Check | What replay records and compares | Example and result | Tests |
+|---|---|---|---|
+| Authorization | Every authorization each call requires, recorded while signatures are mocked: address, function, exact arguments, nested calls. Compared on calls where both versions succeed. | [`examples/auth-scope`](examples/auth-scope). `token-v2-authscope` narrows `transfer`'s signature to `require_auth_for_args((to,))`. All 5 results match, but the authorization differs at call 3, so it is flagged and exits 2. | `authorizations_are_recorded_per_call_without_carry_over`, `a_narrower_signature_scope_is_visible_even_when_results_match` |
+| Events | Contract events each call emits (contract, topics, data), sliced per call. Compared on calls where both versions succeed. | [`examples/events`](examples/events). `token-events-v2-swapped` publishes its transfer event with from/to swapped. All 5 results match, but the event differs at call 3, so it is flagged and exits 2. | `events_are_recorded_per_call_and_a_swapped_event_shows` |
+| Upgrade path (opt-in) | With an `upgrade` block: install the candidate's Wasm, call the contract's own upgrade function with `{"wasm_hash": "candidate"}`, run `migrate` calls, check the contract runs the candidate's code, then run the workflow. A failed upgrade or migration, or code not installed, gives the status `upgrade failed`. | [`examples/upgrade-path`](examples/upgrade-path). Both candidates go in through `upgrade(hash)`, authorized by the admin. Results match the code-swap demo. | `candidates_go_in_through_the_contracts_own_upgrade_function`, `migrate_steps_run_after_the_upgrade_and_are_recorded`, `a_failed_upgrade_is_reported_and_the_old_code_keeps_running`, plus command-line tests `a_failed_upgrade_fails_the_check`, `a_failed_migration_fails_the_check`, `a_clean_upgrade_passes_the_check` |
+
+**Still not checked.** Real signatures and custom account logic (`__check_auth`). Replay holds nobody's keys, so every `require_auth` is satisfied; what each call *requires* is compared instead.
+
+**Also in this batch.** The `update_current_contract_wasm` deprecation warning is silenced with `#[allow(deprecated)]`; all Wasm hashes are unchanged.

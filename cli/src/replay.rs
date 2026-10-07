@@ -503,6 +503,20 @@ mod tests {
     }
 
     #[test]
+    fn migrate_steps_run_after_the_upgrade_and_are_recorded() {
+        let (mut manifest, snap) = upgrade_example();
+        let step: crate::manifest::Step =
+            serde_json::from_str(r#"{"label": "check decimals", "call": "decimals", "args": []}"#).unwrap();
+        manifest.upgrade.as_mut().unwrap().migrate = vec![step];
+        let wasm = std::fs::read(demo("wasm/token-v2-compatible.wasm")).unwrap();
+        let cand = candidate(&snap, &manifest, "v2-compatible", &wasm).unwrap();
+        assert_eq!(cand.migrate.len(), 1);
+        assert!(!cand.migrate[0].failed);
+        assert_eq!(cand.migrate[0].result, "7");
+        assert_eq!(cand.installed, Some(true));
+    }
+
+    #[test]
     fn a_failed_upgrade_is_reported_and_the_old_code_keeps_running() {
         let (mut manifest, snap) = upgrade_example();
         manifest.upgrade.as_mut().unwrap().call = "no_such_function".into();
