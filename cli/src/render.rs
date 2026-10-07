@@ -394,7 +394,9 @@ pub fn render(report: &Value) -> String {
     let base_short = short_label(s(base, "label"));
     let has_figure = units.as_ref().is_some_and(|u| steps.first().is_some_and(|st| u.calls.iter().any(|c| c == s(st, "call"))));
 
-    let has_auth_or_events = cands.iter().any(|c| !arr(&c["auth_differences"]).is_empty() || !arr(&c["event_differences"]).is_empty());
+    let via_upgrade = cands.iter().any(|c| c["installed_via_upgrade"].is_object());
+    let failed_upgrades: Vec<&Value> = cands.iter().copied().filter(|c| s(c, "status") == "upgrade failed").collect();
+    let has_auth_or_events = via_upgrade || cands.iter().any(|c| !arr(&c["auth_differences"]).is_empty() || !arr(&c["event_differences"]).is_empty());
     let mut h = String::new();
     let _ = write!(h, r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -415,6 +417,10 @@ pub fn render(report: &Value) -> String {
     );
 
     match diverged.as_slice() {
+        [] if !failed_upgrades.is_empty() => {
+            let names: Vec<String> = failed_upgrades.iter().map(|c| esc(s(c, "label"))).collect();
+            let _ = write!(h, r#"<h1>The upgrade to <span class="who">{}</span> failed.</h1>"#, names.join(", "));
+        }
         [] => h.push_str(r#"<h1>No candidate changes what this workflow sees.</h1>"#),
         [one] => {
             let (n, a, e) = (arr(&one["step_differences"]).len(), arr(&one["auth_differences"]).len(), arr(&one["event_differences"]).len());
@@ -433,17 +439,21 @@ pub fn render(report: &Value) -> String {
             let _ = write!(h, r#"<h1><span class="who">{} of {}</span> candidates change what this workflow sees.</h1>"#, many.len(), cands.len());
         }
     }
-    let _ = write!(h, r#"<p class="lede">Rehearse replayed the same {n_steps}-step workflow against the deployed contract and each candidate. Every run started from identical {} state, captured at ledger {ledger_fmt}.</p>
-<dl class="tally">"#, esc(s(cap, "network")));
+    let _ = write!(h, r#"<p class="lede">Rehearse replayed the same {n_steps}-step workflow against the deployed contract and each candidate. Every run started from identical {} state, captured at ledger {ledger_fmt}.{}</p>
+<dl class="tally">"#, esc(s(cap, "network")),
+        if via_upgrade { " Each candidate went in through the contract's own upgrade function, not a direct code swap." } else { "" });
     let fails = arr(&base["expectation_failures"]).len();
     let _ = write!(h, r#"<div class="{}"><dt>{}</dt><dd><strong>{}/{n_steps}</strong>expectations met</dd></div>"#,
         if fails == 0 { "ok" } else { "bad" }, esc(base_short), n_steps - fails.min(n_steps));
     for c in cands {
         let n = arr(&c["step_differences"]).len();
         let unverified = s(c, "status").starts_with("unverified");
+        let upgrade_failed = s(c, "status") == "upgrade failed";
         let (a, e) = (arr(&c["auth_differences"]).len(), arr(&c["event_differences"]).len());
-        let class = if n > 0 || a > 0 || e > 0 || unverified { "bad" } else { "ok" };
-        let (shown, word) = if unverified {
+        let class = if n > 0 || a > 0 || e > 0 || unverified || upgrade_failed { "bad" } else { "ok" };
+        let (shown, word) = if upgrade_failed {
+            (0, "upgrade failed; results are from the deployed code".to_string())
+        } else if unverified {
             (n, "unverified reads".to_string())
         } else if n == 0 && a > 0 {
             (a, format!("of {n_steps} calls changed who must authorize"))
@@ -624,6 +634,33 @@ pub fn render(report: &Value) -> String {
             h.push_str("</tbody></table></div></div>\n");
         }
         h.push_str("</section>\n");
+    }
+
+    // How each candidate was installed, when the manifest asks for the upgrade path.
+    if via_upgrade {
+        let _ = write!(h, r#"<section aria-labelledby="installed"><div class="head"><h2 id="installed">How each candidate was installed</h2><p>Through the deployed contract's own upgrade function, with the candidate's Wasm hash, then any migration calls, before the workflow ran.</p></div>
+<div class="scroll"><table class="stack changes"><colgroup><col class="call"><col><col></colgroup><thead><tr><th scope="col">Candidate</th><th scope="col">Call and result</th><th scope="col">Required authorization</th></tr></thead><tbody>
+"#);
+        for c in cands.iter().filter(|c| c["installed_via_upgrade"].is_object()) {
+            let iv = &c["installed_via_upgrade"];
+            let calls = std::iter::once(&iv["upgrade"]).chain(arr(&iv["migrate"]).iter());
+            let mut what = Vec::new();
+            let mut who = Vec::new();
+            for st in calls {
+                let args: Vec<String> = arr(&st["args"]).iter().filter_map(|a| a.as_str()).map(short_keys).collect();
+                let res = if st["failed"].as_bool() == Some(true) { s(st, "result").trim_start_matches("error: ").to_string() } else { "ok".to_string() };
+                what.push(format!("<li>{}({}): {}</li>", esc(s(st, "call")), esc(&args.join(", ")), esc(&res)));
+                for a in arr(&st["auths"]).iter().filter_map(|x| x.as_str()) {
+                    who.push(format!("<li>{}</li>", esc(&short_keys(a))));
+                }
+            }
+            let ok = iv["candidate_code_installed"].as_bool() == Some(true);
+            let installed = if ok { "candidate code running".to_string() } else { "candidate code not installed".to_string() };
+            let _ = write!(h, r#"<tr><th scope="row">{}<small>{}</small></th><td{} data-v="call">{}<span class="none">{}</span></td><td data-v="authorization">{}</td></tr>
+"#, esc(s(c, "label")), esc(&hash8(c)), if ok { "" } else { r#" class="diff""# }, format!("<ul>{}</ul>", what.join("")), esc(&installed),
+                if who.is_empty() { r#"<span class="none">None required</span>"#.to_string() } else { format!("<ul>{}</ul>", who.join("")) });
+        }
+        h.push_str("</tbody></table></div></section>\n");
     }
 
     // Authorization and event changes, compared on calls where both versions succeeded.

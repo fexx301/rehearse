@@ -1,0 +1,144 @@
+{
+  "closure_candidates": [
+    {
+      "label": "v2-compatible",
+      "wasm_sha256": "fe2fef8246ad2104f58b88299c48c1d89f75714257fec49062cc59452525d879"
+    },
+    {
+      "label": "v2-broken",
+      "wasm_sha256": "fffa63ee841f893896d5428a873ed6be5f8994327936389fc5e788d11fa7ecb0"
+    }
+  ],
+  "closure_rounds": [
+    {
+      "added": [
+        {
+          "key": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+          "read_by": "baseline"
+        },
+        {
+          "key": "account GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T",
+          "read_by": "v2-compatible"
+        },
+        {
+          "key": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 5541220902715666415 })",
+          "read_by": "v2-compatible"
+        },
+        {
+          "key": "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+          "read_by": "v2-compatible"
+        },
+        {
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+          "read_by": "v2-broken"
+        },
+        {
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+          "read_by": "v2-broken"
+        },
+        {
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+          "read_by": "v2-broken"
+        },
+        {
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)",
+          "read_by": "v2-broken"
+        }
+      ],
+      "keys": 8,
+      "ledger": 5070693,
+      "round": 1
+    },
+    {
+      "added": [],
+      "keys": 16,
+      "ledger": 5070694,
+      "round": 2
+    }
+  ],
+  "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+  "deployed_wasm_sha256": "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+  "keys_captured": [
+    "account GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T",
+    "code d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent instance"
+  ],
+  "keys_verified_absent": [
+    "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 3625655011888117381 })",
+    "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 5541220902715666415 })",
+    "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+    "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)"
+  ],
+  "keys_verified_absent_xdr": [
+    "AAAAAAAAAAA7Tb1aTkDvO5zanYKMi25YLyMAZs6BsXGX29jPUZEjKA==",
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVCyEDby6XMK4AAAAA",
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVMlDqBhW0toUAAAAA",
+    "AAAABgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAVTOZfDWhWL+8AAAAA",
+    "AAAABgAAAAAAAAAAvCYDbVjoTnGD/1fnoEJ3d1RCEFLrMQr8FmIySXkem7cAAAAVCyEDby6XMK4AAAAA",
+    "AAAABgAAAAGKz4x52MqlLGne+p5+wyVykC1oq2o05xdtA9n/uLZV6wAAABAAAAABAAAAAgAAAA8AAAAJQmFsYW5jZU9mAAAAAAAAEgAAAAAAAAAAAcl1v9PyWKqUa0Go5Z5/9lWmc6hCX7aqrCdJXxfFSqcAAAAB",
+    "AAAABgAAAAGKz4x52MqlLGne+p5+wyVykC1oq2o05xdtA9n/uLZV6wAAABAAAAABAAAAAgAAAA8AAAAJQmFsYW5jZU9mAAAAAAAAEgAAAAAAAAAAO029Wk5A7zuc2p2CjItuWC8jAGbOgbFxl9vYz1GRIygAAAAB",
+    "AAAABgAAAAGKz4x52MqlLGne+p5+wyVykC1oq2o05xdtA9n/uLZV6wAAABAAAAABAAAAAgAAAA8AAAAJQmFsYW5jZU9mAAAAAAAAEgAAAAAAAAAAbHXnuReuUM6v8r5n+0v4vO5FAgrbutilcIJ0Dpx0t3AAAAAB",
+    "AAAABgAAAAGKz4x52MqlLGne+p5+wyVykC1oq2o05xdtA9n/uLZV6wAAABAAAAABAAAAAgAAAA8AAAAJQmFsYW5jZU9mAAAAAAAAEgAAAAAAAAAAjGpAsEEqq4nEJGBCJ/6fsJt/7Ii26RIezBOjlrpSoywAAAAB"
+  ],
+  "ledger": 5070694,
+  "ledger_close_time": 1791377057,
+  "network": "testnet",
+  "network_passphrase": "Test SDF Network ; September 2015",
+  "protocol": 29,
+  "rpc": "https://soroban-testnet.stellar.org",
+  "simulation_source": "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T",
+  "simulations": [
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070691,
+      "step": "holder A balance"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070691,
+      "step": "holder B balance"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070692,
+      "step": "holder C balance"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070692,
+      "step": "holder D balance"
+    },
+    {
+      "footprint_keys": 6,
+      "simulated_at_ledger": 5070692,
+      "step": "A sends 100 RHD to B"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070692,
+      "step": "holder A balance after"
+    },
+    {
+      "footprint_keys": 3,
+      "simulated_at_ledger": 5070693,
+      "step": "holder B balance after"
+    },
+    {
+      "footprint_keys": 2,
+      "simulated_at_ledger": 5070693,
+      "step": "decimals"
+    }
+  ],
+  "snapshot_sha256": "365c6597b4ab1365c2f326ab3bd971b8c2ee377b89e6826eb2a230b07eeabf42",
+  "tool": "rehearse 0.1.0",
+  "ttl_configuration": "SDK default state-archival settings, not the network's"
+}

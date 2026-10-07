@@ -1,0 +1,498 @@
+{
+  "baseline": {
+    "expectation_failures": [],
+    "label": "baseline (deployed)",
+    "reads_outside_capture": [],
+    "status": "ok",
+    "steps": [
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder A balance",
+        "result": "12400000000"
+      },
+      {
+        "args": [
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder B balance",
+        "result": "5000000000"
+      },
+      {
+        "args": [
+          "GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder C balance",
+        "result": "752500000"
+      },
+      {
+        "args": [
+          "GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder D balance",
+        "result": "30000000000"
+      },
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+          "1000000000"
+        ],
+        "call": "transfer",
+        "failed": false,
+        "label": "A sends 100 RHD to B",
+        "result": "()"
+      },
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder A balance after",
+        "result": "11400000000"
+      },
+      {
+        "args": [
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder B balance after",
+        "result": "6000000000"
+      },
+      {
+        "args": [],
+        "call": "decimals",
+        "failed": false,
+        "label": "decimals",
+        "result": "7"
+      }
+    ],
+    "wasm_sha256": "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5"
+  },
+  "candidates": [
+    {
+      "installed_via_upgrade": {
+        "candidate_code_installed": true,
+        "migrate": [],
+        "upgrade": {
+          "args": [
+            "<candidate wasm hash>"
+          ],
+          "auths": [
+            "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T authorizes CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI.upgrade(0xfe2fef8246ad2104f58b88299c48c1d89f75714257fec49062cc59452525d879)"
+          ],
+          "call": "upgrade",
+          "failed": false,
+          "label": "upgrade",
+          "result": "()"
+        }
+      },
+      "label": "v2-compatible",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "no observed difference",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance",
+          "result": "12400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance",
+          "result": "5000000000"
+        },
+        {
+          "args": [
+            "GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder C balance",
+          "result": "752500000"
+        },
+        {
+          "args": [
+            "GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder D balance",
+          "result": "30000000000"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+            "1000000000"
+          ],
+          "call": "transfer",
+          "failed": false,
+          "label": "A sends 100 RHD to B",
+          "result": "()"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance after",
+          "result": "11400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance after",
+          "result": "6000000000"
+        },
+        {
+          "args": [],
+          "call": "decimals",
+          "failed": false,
+          "label": "decimals",
+          "result": "7"
+        }
+      ],
+      "wasm_sha256": "fe2fef8246ad2104f58b88299c48c1d89f75714257fec49062cc59452525d879"
+    },
+    {
+      "installed_via_upgrade": {
+        "candidate_code_installed": true,
+        "migrate": [],
+        "upgrade": {
+          "args": [
+            "<candidate wasm hash>"
+          ],
+          "auths": [
+            "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T authorizes CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI.upgrade(0xfffa63ee841f893896d5428a873ed6be5f8994327936389fc5e788d11fa7ecb0)"
+          ],
+          "call": "upgrade",
+          "failed": false,
+          "label": "upgrade",
+          "result": "()"
+        }
+      },
+      "label": "v2-broken",
+      "reads_absent_on_chain": [
+        "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+        "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+        "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+        "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)"
+      ],
+      "reads_outside_capture": [],
+      "state_differences": [
+        {
+          "baseline": "11400000000",
+          "candidate": "12400000000",
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)"
+        },
+        {
+          "baseline": "6000000000",
+          "candidate": "5000000000",
+          "key": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)"
+        }
+      ],
+      "status": "diverged",
+      "step_differences": [
+        {
+          "baseline": "12400000000",
+          "candidate": "0",
+          "label": "holder A balance",
+          "step": 1
+        },
+        {
+          "baseline": "5000000000",
+          "candidate": "0",
+          "label": "holder B balance",
+          "step": 2
+        },
+        {
+          "baseline": "752500000",
+          "candidate": "0",
+          "label": "holder C balance",
+          "step": 3
+        },
+        {
+          "baseline": "30000000000",
+          "candidate": "0",
+          "label": "holder D balance",
+          "step": 4
+        },
+        {
+          "baseline": "()",
+          "candidate": "error: InsufficientBalance (Error(Contract, #2))",
+          "label": "A sends 100 RHD to B",
+          "step": 5
+        },
+        {
+          "baseline": "11400000000",
+          "candidate": "0",
+          "label": "holder A balance after",
+          "step": 6
+        },
+        {
+          "baseline": "6000000000",
+          "candidate": "0",
+          "label": "holder B balance after",
+          "step": 7
+        }
+      ],
+      "steps": [
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance",
+          "result": "0"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance",
+          "result": "0"
+        },
+        {
+          "args": [
+            "GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder C balance",
+          "result": "0"
+        },
+        {
+          "args": [
+            "GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder D balance",
+          "result": "0"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+            "1000000000"
+          ],
+          "call": "transfer",
+          "failed": true,
+          "label": "A sends 100 RHD to B",
+          "result": "error: InsufficientBalance (Error(Contract, #2))"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance after",
+          "result": "0"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance after",
+          "result": "0"
+        },
+        {
+          "args": [],
+          "call": "decimals",
+          "failed": false,
+          "label": "decimals",
+          "result": "7"
+        }
+      ],
+      "wasm_sha256": "fffa63ee841f893896d5428a873ed6be5f8994327936389fc5e788d11fa7ecb0"
+    }
+  ],
+  "capture": {
+    "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+    "deployed_wasm_sha256": "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+    "keys_captured": [
+      "account GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T",
+      "code d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent instance"
+    ],
+    "keys_verified_absent": [
+      "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 3625655011888117381 })",
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 5541220902715666415 })",
+      "GC6CMA3NLDUE44MD75L6PICCO53VIQQQKLVTCCX4CZRDESLZD2N3OA7T temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent BalanceOf(GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH)"
+    ],
+    "ledger": 5070694,
+    "ledger_close_time": 1791377057,
+    "network": "testnet",
+    "protocol": 29,
+    "snapshot_sha256": "365c6597b4ab1365c2f326ab3bd971b8c2ee377b89e6826eb2a230b07eeabf42"
+  },
+  "claim": "Observed differences for the listed calls on the captured state. Not a safety certification.",
+  "manifest": {
+    "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+    "description": "The demo workflow, with each candidate installed through the deployed contract's own upgrade(new_wasm_hash) function instead of a direct code swap.",
+    "display": {
+      "amount_calls": [
+        "balance"
+      ],
+      "decimals": 7,
+      "symbol": "RHD"
+    },
+    "network": "testnet",
+    "rpc": "https://soroban-testnet.stellar.org",
+    "steps": [
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          }
+        ],
+        "call": "balance",
+        "expect": "12400000000",
+        "label": "holder A balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          }
+        ],
+        "call": "balance",
+        "expect": "5000000000",
+        "label": "holder B balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GCGGUQFQIEVKXCOEERQEEJ76T6YJW77MRC3OSEQ6ZQJ2HFV2KKRSZJGH"
+          }
+        ],
+        "call": "balance",
+        "expect": "752500000",
+        "label": "holder C balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GBWHLZ5ZC6XFBTVP6K7GP62L7C6O4RICBLN3VWFFOCBHIDU4OS3XBIHA"
+          }
+        ],
+        "call": "balance",
+        "expect": "30000000000",
+        "label": "holder D balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          },
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          },
+          {
+            "i128": "1000000000"
+          }
+        ],
+        "call": "transfer",
+        "expect": "()",
+        "label": "A sends 100 RHD to B"
+      },
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          }
+        ],
+        "call": "balance",
+        "expect": "11400000000",
+        "label": "holder A balance after"
+      },
+      {
+        "args": [
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          }
+        ],
+        "call": "balance",
+        "expect": "6000000000",
+        "label": "holder B balance after"
+      },
+      {
+        "args": [],
+        "call": "decimals",
+        "expect": "7",
+        "label": "decimals"
+      }
+    ],
+    "upgrade": {
+      "args": [
+        {
+          "wasm_hash": "candidate"
+        }
+      ],
+      "call": "upgrade"
+    }
+  },
+  "runtime": {
+    "auth_mocked": true,
+    "network_calls_during_replay": false,
+    "soroban_env_host": "28.0.2 with experimental `next` feature",
+    "soroban_sdk": "28.0.0"
+  },
+  "summary": [
+    {
+      "candidate": "v2-compatible",
+      "state_differences": 0,
+      "status": "no observed difference",
+      "step_differences": 0
+    },
+    {
+      "candidate": "v2-broken",
+      "state_differences": 2,
+      "status": "diverged",
+      "step_differences": 7
+    }
+  ],
+  "tool": "rehearse 0.1.0"
+}

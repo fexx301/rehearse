@@ -97,6 +97,11 @@ pub struct Branch {
     pub final_state: BTreeMap<String, String>,
     /// Keys read during the workflow that the snapshot did not contain.
     pub misses: BTreeMap<String, LedgerKey>,
+    /// Upgrade path only: the upgrade call, the migrate calls, and whether the contract ended up
+    /// running the candidate's code.
+    pub upgrade: Option<StepResult>,
+    pub migrate: Vec<StepResult>,
+    pub installed: Option<bool>,
 }
 
 pub fn key_id(k: &LedgerKey) -> String {
@@ -242,10 +247,57 @@ fn describe_contract_error(code: u32, names: &BTreeMap<u32, String>) -> String {
 
 /// Run every manifest step, in order, in one Env built from `snap`.
 pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Branch, String> {
+    run_inner(snap, manifest, label, None)
+}
+
+/// Run a candidate. By default its code is swapped in directly; when the manifest has an
+/// `upgrade` block, the code is only installed and the contract's own upgrade function
+/// (then any migrate calls) puts it in place before the workflow runs.
+pub fn candidate(snap: &LedgerSnapshot, manifest: &Manifest, label: &str, wasm: &[u8]) -> Result<Branch, String> {
+    let contract = ScAddress::from_str(&manifest.contract).map_err(|e| format!("bad contract address: {e}"))?;
+    match &manifest.upgrade {
+        None => run_inner(with_candidate(snap, &contract, wasm)?, manifest, label, None),
+        Some(_) => run_inner(install_code(snap, &contract, wasm)?, manifest, label, Some(wasm)),
+    }
+}
+
+/// A copy of `snap` with `wasm` installed as a code entry (TTL of the contract instance), but
+/// the contract still pointing at its deployed code.
+pub fn install_code(snap: &LedgerSnapshot, contract: &ScAddress, wasm: &[u8]) -> Result<LedgerSnapshot, String> {
+    let mut out = snap.clone();
+    let hash = Hash(Sha256::digest(wasm).into());
+    let ttl = out
+        .ledger_entries
+        .iter()
+        .find_map(|(_, (entry, ttl))| match &entry.data {
+            LedgerEntryData::ContractData(d) if &d.contract == contract && d.key == ScVal::LedgerKeyContractInstance => Some(*ttl),
+            _ => None,
+        })
+        .ok_or_else(|| format!("snapshot has no instance entry for {contract}"))?;
+    let code = LedgerEntry {
+        last_modified_ledger_seq: out.sequence_number,
+        data: LedgerEntryData::ContractCode(ContractCodeEntry {
+            ext: ContractCodeEntryExt::V0,
+            hash: hash.clone(),
+            code: wasm.to_vec().try_into().map_err(|_| "candidate Wasm too large".to_string())?,
+        }),
+        ext: LedgerEntryExt::V0,
+    };
+    let key = LedgerKey::ContractCode(LedgerKeyContractCode { hash });
+    out.ledger_entries.retain(|(k, _)| **k != key);
+    out.ledger_entries.push((Box::new(key), (Box::new(code), ttl)));
+    Ok(out)
+}
+
+fn run_inner(snap: LedgerSnapshot, manifest: &Manifest, label: &str, via_upgrade: Option<&[u8]>) -> Result<Branch, String> {
     let contract = ScAddress::from_str(&manifest.contract)
         .map_err(|e| format!("bad contract address: {e}"))?;
-    let wasm = deployed_wasm(&snap, &contract)?;
+    let wasm = match via_upgrade {
+        Some(w) => w.to_vec(),
+        None => deployed_wasm(&snap, &contract)?,
+    };
     let names = error_names(&wasm);
+    let candidate_hash: [u8; 32] = Sha256::digest(&wasm).into();
     let snap = Rc::new(snap);
     let source = Rc::new(RecordingSource { inner: snap.clone(), misses: RefCell::default() });
     let env = Env::from_ledger_snapshot(SnapshotSourceInput {
@@ -257,20 +309,15 @@ pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Bra
     env.mock_all_auths();
     let target = Address::from_str(&env, &manifest.contract);
 
-    let mut steps = Vec::new();
-    for step in &manifest.steps {
-        let mut args = soroban_sdk::Vec::<Val>::new(&env);
-        for a in &step.args {
-            let sc = a.to_scval()?;
-            args.push_back(Val::try_from_val(&env, &sc).map_err(|e| format!("arg {sc:?}: {e:?}"))?);
+    let invoke = |label: &str, call: &str, args: &[crate::manifest::Arg]| -> Result<StepResult, String> {
+        let mut vals = soroban_sdk::Vec::<Val>::new(&env);
+        for a in args {
+            let sc = a.to_scval_with(Some(&candidate_hash))?;
+            vals.push_back(Val::try_from_val(&env, &sc).map_err(|e| format!("arg {sc:?}: {e:?}"))?);
         }
         let events_before: Vec<soroban_sdk::xdr::ContractEvent> = env.events().all().events().to_vec();
         let outcome = catch_unwind(AssertUnwindSafe(|| {
-            env.try_invoke_contract::<Val, soroban_sdk::Error>(
-                &target,
-                &Symbol::new(&env, &step.call),
-                args,
-            )
+            env.try_invoke_contract::<Val, soroban_sdk::Error>(&target, &Symbol::new(&env, call), vals)
         }));
         let (result, failed) = match outcome {
             Ok(Ok(Ok(v))) => (
@@ -297,15 +344,36 @@ pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Bra
         // The host's event buffer may accumulate across calls; keep only what this call added.
         let after: Vec<soroban_sdk::xdr::ContractEvent> = env.events().all().events().to_vec();
         let new_events = if after.starts_with(&events_before) { &after[events_before.len()..] } else { &after[..] };
-        steps.push(StepResult {
-            label: step.label.clone(),
-            call: step.call.clone(),
-            args: step.args.iter().map(|a| a.display()).collect(),
+        Ok(StepResult {
+            label: label.into(),
+            call: call.into(),
+            args: args.iter().map(|a| a.display()).collect(),
             result,
             failed,
             auths,
             events: new_events.iter().map(event_str).collect(),
-        });
+        })
+    };
+
+    // Upgrade path: the contract's own upgrade call, then migrations. Kept apart from the
+    // compared workflow steps so step indexes line up across versions.
+    let (mut upgrade, mut migrate, mut installed) = (None, Vec::new(), None);
+    if let (Some(_), Some(u)) = (via_upgrade, &manifest.upgrade) {
+        let up = invoke("upgrade", &u.call, &u.args)?;
+        let ok = !up.failed;
+        upgrade = Some(up);
+        if ok {
+            for m in &u.migrate {
+                migrate.push(invoke(&m.label, &m.call, &m.args)?);
+            }
+        }
+        let now = env.to_ledger_snapshot();
+        installed = Some(deployed_wasm(&now, &contract).map(|w| Sha256::digest(&w)[..] == candidate_hash[..]).unwrap_or(false));
+    }
+
+    let mut steps = Vec::new();
+    for step in &manifest.steps {
+        steps.push(invoke(&step.label, &step.call, &step.args)?);
     }
 
     let mut final_state = BTreeMap::new();
@@ -325,7 +393,7 @@ pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Bra
         }
     }
     let misses = source.misses.borrow().clone();
-    Ok(Branch { label: label.into(), wasm_sha256: sha256_hex(&wasm), steps, final_state, misses })
+    Ok(Branch { label: label.into(), wasm_sha256: sha256_hex(&wasm), steps, final_state, misses, upgrade, migrate, installed })
 }
 
 #[cfg(test)]
@@ -416,5 +484,32 @@ mod tests {
             assert_eq!(b.result, c.result, "{}", b.label);
         }
         assert!(cand.steps[2].events[0].contains("[transfer, GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI, GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3]"));
+    }
+    fn upgrade_example() -> (Manifest, LedgerSnapshot) {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../examples/upgrade-path");
+        (Manifest::load(&dir.join("manifest.json")).unwrap(), LedgerSnapshot::read_file(dir.join("capture/snapshot.json")).unwrap())
+    }
+
+    #[test]
+    fn candidates_go_in_through_the_contracts_own_upgrade_function() {
+        let (manifest, snap) = upgrade_example();
+        let wasm = std::fs::read(demo("wasm/token-v2-broken.wasm")).unwrap();
+        let cand = candidate(&snap, &manifest, "v2-broken", &wasm).unwrap();
+        let up = cand.upgrade.as_ref().unwrap();
+        assert!(!up.failed, "{}", up.result);
+        assert_eq!(cand.installed, Some(true));
+        assert!(up.auths[0].ends_with(&format!(".upgrade(0x{})", sha256_hex(&wasm))));
+        assert_eq!(cand.steps[0].result, "0", "the workflow ran on the candidate");
+    }
+
+    #[test]
+    fn a_failed_upgrade_is_reported_and_the_old_code_keeps_running() {
+        let (mut manifest, snap) = upgrade_example();
+        manifest.upgrade.as_mut().unwrap().call = "no_such_function".into();
+        let wasm = std::fs::read(demo("wasm/token-v2-broken.wasm")).unwrap();
+        let cand = candidate(&snap, &manifest, "v2-broken", &wasm).unwrap();
+        assert!(cand.upgrade.as_ref().unwrap().failed);
+        assert_eq!(cand.installed, Some(false));
+        assert_eq!(cand.steps[0].result, "12400000000", "the deployed code answered");
     }
 }

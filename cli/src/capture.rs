@@ -156,7 +156,7 @@ pub fn capture(
         let (snap, header_raw) = snapshot_at(&manifest.rpc, &passphrase, &fetched)?;
         let mut branches = vec![replay::run(snap.clone(), manifest, "baseline")?];
         for (label, wasm) in candidates {
-            branches.push(replay::run(replay::with_candidate(&snap, &contract, wasm)?, manifest, label)?);
+            branches.push(replay::candidate(&snap, manifest, label, wasm)?);
         }
         let mut added = Vec::new();
         for b in &branches {

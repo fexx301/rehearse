@@ -101,7 +101,19 @@ Write a manifest listing the calls that matter to your holders, in order. Argume
 }
 ```
 
-Supported argument types: `address`, `i128`, `u64`, `i64`, `u32`, `string`, `symbol`, `bytes` (hex) and `bool`. Write 64- and 128-bit integers as strings so JSON never rounds them. Vectors, maps and structs are not supported as arguments yet.
+Supported argument types: `address`, `i128`, `u64`, `i64`, `u32`, `string`, `symbol`, `bytes` (hex), `bool` and `wasm_hash`. Write 64- and 128-bit integers as strings so JSON never rounds them. Vectors, maps and structs are not supported as arguments yet.
+
+To install candidates through your contract's own upgrade function instead of a direct code swap, add an `upgrade` block. `{"wasm_hash": "candidate"}` stands for each candidate's hash, and `migrate` steps run after the upgrade and before the workflow:
+
+```json
+"upgrade": {
+  "call": "upgrade",
+  "args": [{ "wasm_hash": "candidate" }],
+  "migrate": [{ "label": "migrate", "call": "migrate", "args": [] }]
+}
+```
+
+If the upgrade fails, or the contract isn't running the candidate's code afterwards, the candidate is reported as `upgrade failed`. See [`examples/upgrade-path`](examples/upgrade-path) ([live report](https://fexx301.github.io/rehearse/examples/upgrade-path/report.html)).
 
 Then capture once, and replay as often as you like:
 
@@ -133,7 +145,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 
 - **Runtime.** `soroban-sdk` 28.0.0 and `soroban-env-host` 28.0.2 with the experimental `next` feature, which runs protocol-29 state. This is close to production behaviour but not exact protocol-29 parity. Tested with contracts built by soroban-sdk 28. State-archival settings in the snapshot use SDK defaults, not the network's.
 - **Signatures are not checked.** Replay holds nobody's keys, so every `require_auth` is satisfied. What each call *requires* (address, function, arguments) is still recorded and compared. Signatures themselves, and custom account logic (`__check_auth`), are not run.
-- **Code replacement, not the upgrade path.** The candidate is installed directly under the contract address. Your contract's own `upgrade` entrypoint and any migration logic are not exercised.
+- **Upgrade path is opt-in.** By default the candidate's code is swapped in directly. With an `upgrade` block, your contract's own upgrade function and migration calls run first. Authorization for them is mocked like everything else.
 - **Only what you list.** Calls not in the manifest, and fee and resource costs, are not compared.
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
 - **One ledger.** A capture is a point-in-time copy. Recapture before relying on an old report.
@@ -157,7 +169,7 @@ demo/wasm/        the built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
 demo/upgrade/     the proposed upgrade the pull-request check replays
-examples/         the authorization and event checks, and real-world runs (Blend's lending pool on testnet and mainnet)
+examples/         the authorization, event and upgrade-path checks, and real-world runs (Blend's lending pool on testnet and mainnet)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check

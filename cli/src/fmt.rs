@@ -33,6 +33,7 @@ pub fn scval(v: &ScVal) -> String {
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
+        ScVal::Bytes(b) => format!("0x{}", hex(b.0.as_slice())),
         ScVal::LedgerKeyContractInstance => "instance".into(),
         other => format!("{other:?}"),
     }

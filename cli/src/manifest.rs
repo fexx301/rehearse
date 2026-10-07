@@ -12,7 +12,21 @@ pub struct Manifest {
     /// Optional formatting hints for reports: token amounts in whole units.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub display: Option<Display>,
+    /// Optional: install each candidate through the contract's own upgrade function instead of
+    /// swapping the code in directly, then run any migration calls, then the workflow.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upgrade: Option<Upgrade>,
     pub steps: Vec<Step>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Upgrade {
+    pub call: String,
+    #[serde(default)]
+    pub args: Vec<Arg>,
+    /// Calls run after the upgrade and before the workflow, such as a `migrate` function.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub migrate: Vec<Step>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +62,10 @@ pub enum Arg {
     /// Hex, with or without a 0x prefix.
     Bytes(String),
     Bool(bool),
+    /// A 32-byte Wasm hash, as hex, or "candidate" for the hash of the candidate being installed
+    /// (only meaningful in the `upgrade` block).
+    #[serde(rename = "wasm_hash")]
+    WasmHash(String),
 }
 
 impl Manifest {
@@ -58,10 +76,13 @@ impl Manifest {
         if m.steps.is_empty() {
             return Err("manifest has no steps".into());
         }
-        for step in &m.steps {
+        for step in m.steps.iter().chain(m.upgrade.iter().flat_map(|u| u.migrate.iter())) {
             for arg in &step.args {
                 arg.to_scval()?;
             }
+        }
+        for arg in m.upgrade.iter().flat_map(|u| u.args.iter()) {
+            arg.to_scval_with(Some(&[0; 32]))?;
         }
         Ok(m)
     }
@@ -69,7 +90,24 @@ impl Manifest {
 
 impl Arg {
     pub fn to_scval(&self) -> Result<ScVal, String> {
+        self.to_scval_with(None)
+    }
+
+    /// Like `to_scval`, resolving `{"wasm_hash": "candidate"}` to the given hash.
+    pub fn to_scval_with(&self, candidate_hash: Option<&[u8; 32]>) -> Result<ScVal, String> {
         Ok(match self {
+            Arg::WasmHash(s) => {
+                let bytes = if s == "candidate" {
+                    candidate_hash.ok_or("{\"wasm_hash\": \"candidate\"} is only valid in the upgrade block")?.to_vec()
+                } else {
+                    let b = decode_hex(s)?;
+                    if b.len() != 32 {
+                        return Err(format!("bad wasm_hash {s}: expected 32 bytes"));
+                    }
+                    b
+                };
+                ScVal::Bytes(ScBytes(BytesM::try_from(bytes).map_err(|e| format!("bad wasm_hash: {e}"))?))
+            }
             Arg::Address(s) => ScVal::Address(
                 ScAddress::from_str(s).map_err(|e| format!("bad address {s}: {e}"))?,
             ),
@@ -97,6 +135,8 @@ impl Arg {
         match self {
             Arg::Address(s) | Arg::I128(s) | Arg::U64(s) | Arg::I64(s) | Arg::Symbol(s) => s.clone(),
             Arg::Bytes(s) => format!("0x{}", s.trim_start_matches("0x")),
+            Arg::WasmHash(s) if s == "candidate" => "<candidate wasm hash>".into(),
+            Arg::WasmHash(s) => s.clone(),
             Arg::U32(v) => v.to_string(),
             Arg::String(s) => format!("{s:?}"),
             Arg::Bool(b) => b.to_string(),
@@ -160,6 +200,19 @@ mod tests {
         assert!(e.contains("-1"), "{e}");
         assert!(arg(r#"{"address": "not-an-address"}"#).to_scval().is_err());
         assert!(arg(r#"{"i128": "1.5"}"#).to_scval().is_err());
+    }
+
+    #[test]
+    fn wasm_hash_resolves_the_candidate_and_checks_length() {
+        let h = [7u8; 32];
+        match arg(r#"{"wasm_hash": "candidate"}"#).to_scval_with(Some(&h)).unwrap() {
+            ScVal::Bytes(b) => assert_eq!(b.0.to_vec(), h.to_vec()),
+            other => panic!("{other:?}"),
+        }
+        assert!(arg(r#"{"wasm_hash": "candidate"}"#).to_scval().is_err(), "only valid in the upgrade block");
+        let hex = "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5";
+        assert!(arg(&format!(r#"{{"wasm_hash": "{hex}"}}"#)).to_scval().is_ok());
+        assert!(arg(r#"{"wasm_hash": "00ff"}"#).to_scval().is_err(), "wrong length");
     }
 
     #[test]

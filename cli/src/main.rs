@@ -143,12 +143,12 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         .flatten()
         .filter_map(|v| v.as_str().map(String::from))
         .collect();
-    let contract = soroban_sdk::xdr::ScAddress::from_str_checked(&manifest.contract)?;
+    soroban_sdk::xdr::ScAddress::from_str_checked(&manifest.contract)?; // fail early on a bad address
 
     let baseline = replay::run(snap.clone(), &manifest, "baseline (deployed)")?;
     let mut candidates = Vec::new();
     for (label, wasm) in read_candidates(&a.candidates)? {
-        candidates.push(replay::run(replay::with_candidate(&snap, &contract, &wasm)?, &manifest, &label)?);
+        candidates.push(replay::candidate(&snap, &manifest, &label, &wasm)?);
     }
 
     let uncaptured = |b: &replay::Branch| -> Vec<String> {
@@ -161,6 +161,9 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         b.misses
             .iter()
             .filter(|(id, _)| verified_absent.contains(*id) && !baseline_absent.contains(id))
+            // Nonce entries come from mocked authorization (for example the upgrade call), not from
+            // the contract's own reads, so they never explain a divergence.
+            .filter(|(_, k)| !matches!(k, soroban_sdk::xdr::LedgerKey::ContractData(d) if matches!(d.key, soroban_sdk::xdr::ScVal::LedgerKeyNonce(_))))
             .map(|(_, k)| fmt::ledger_key(k))
             .collect()
     };
@@ -217,7 +220,10 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             .map(|(i, (b, x))| json!({"step": i + 1, "label": b.label, "baseline": b.events, "candidate": x.events}))
             .collect();
         let outside = uncaptured(c);
-        let status = if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() {
+        let upgrade_failed = c.upgrade.as_ref().is_some_and(|u| u.failed) || c.installed == Some(false);
+        let status = if upgrade_failed {
+            "upgrade failed"
+        } else if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() {
             "diverged"
         } else if !outside.is_empty() {
             "unverified: read state outside the capture"
@@ -249,6 +255,14 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         }
         if !event_diffs.is_empty() {
             cand["event_differences"] = json!(event_diffs);
+        }
+        if let Some(u) = &c.upgrade {
+            let one = |s: &replay::StepResult| json!({"label": s.label, "call": s.call, "args": s.args, "result": s.result, "failed": s.failed, "auths": s.auths});
+            cand["installed_via_upgrade"] = json!({
+                "upgrade": one(u),
+                "migrate": c.migrate.iter().map(one).collect::<Vec<_>>(),
+                "candidate_code_installed": c.installed,
+            });
         }
         candidate_reports.push(cand);
     }
