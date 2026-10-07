@@ -1,0 +1,164 @@
+name: Rehearse upgrade check
+description: Replay a Soroban contract's workflow against candidate Wasm on captured ledger state, and fail when an upgrade changes what it observes.
+author: fexx301
+branding:
+  icon: repeat
+  color: blue
+
+inputs:
+  manifest:
+    description: Path to the manifest (the calls to replay, in order).
+    required: true
+  capture:
+    description: Folder written by `rehearse capture`.
+    required: true
+  candidates:
+    description: One LABEL=path/to/candidate.wasm per line.
+    required: true
+  check-signatures:
+    description: Also check that signatures made for the deployed contract still work on each candidate.
+    default: 'false'
+  fail-on-divergence:
+    description: Fail the step when any candidate differs from the deployed contract.
+    default: 'true'
+  out-dir:
+    description: Where to write report.json and report.html.
+    default: rehearse-report
+  artifact-name:
+    description: Name of the uploaded report artifact. Set it to '' to skip the upload.
+    default: rehearse-report
+  version:
+    description: Release of the rehearse CLI to use, such as v0.1.0. Defaults to the tag this action is pinned to, else the latest release.
+    default: ''
+
+outputs:
+  exit-code:
+    description: 0 when no candidate differs, 2 when one does.
+    value: ${{ steps.replay.outputs.exit-code }}
+  diverged:
+    description: "'true' when any candidate differs from the deployed contract."
+    value: ${{ steps.replay.outputs.diverged }}
+  report-json:
+    description: Path to the JSON report.
+    value: ${{ steps.replay.outputs.report-json }}
+  report-html:
+    description: Path to the HTML report.
+    value: ${{ steps.replay.outputs.report-html }}
+  installed-from:
+    description: "'release' (prebuilt binary) or 'source' (built with cargo)."
+    value: ${{ steps.install.outputs.installed-from }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install rehearse
+      id: install
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/rehearse"
+        bin="$dir/bin"
+        if [ -x "$bin/rehearse" ]; then
+          echo "$bin" >> "$GITHUB_PATH"
+          echo "installed-from=$(cat "$dir/from")" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        mkdir -p "$bin"
+        version="$VERSION"
+        if [ -z "$version" ]; then case "$ACTION_REF" in v[0-9]*) version="$ACTION_REF" ;; esac; fi
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64) target=x86_64-unknown-linux-gnu ;;
+          Linux-ARM64) target=aarch64-unknown-linux-gnu ;;
+          macOS-ARM64) target=aarch64-apple-darwin ;;
+          macOS-X64) target=x86_64-apple-darwin ;;
+          *) target= ;;
+        esac
+        from=source
+        if [ -n "$target" ]; then
+          if [ -n "$version" ]; then base="https://github.com/fexx301/rehearse/releases/download/$version"; else base="https://github.com/fexx301/rehearse/releases/latest/download"; fi
+          asset="rehearse-$target.tar.gz"
+          if curl -fsSL --retry 3 -o "$dir/$asset" "$base/$asset" && curl -fsSL --retry 3 -o "$dir/$asset.sha256" "$base/$asset.sha256"; then
+            (cd "$dir" && shasum -a 256 -c "$asset.sha256")
+            tar -xzf "$dir/$asset" -C "$dir"
+            mv "$dir/rehearse-$target/rehearse" "$bin/rehearse"
+            from=release
+          else
+            echo "::warning::No prebuilt rehearse at $base; building from source."
+          fi
+        else
+          echo "No prebuilt rehearse for $RUNNER_OS $RUNNER_ARCH; building from source."
+        fi
+        if [ "$from" = source ]; then
+          cargo install --git https://github.com/fexx301/rehearse ${version:+--tag "$version"} --locked --root "$dir" rehearse
+        fi
+        echo "$from" > "$dir/from"
+        echo "$bin" >> "$GITHUB_PATH"
+        echo "installed-from=$from" >> "$GITHUB_OUTPUT"
+        "$bin/rehearse" --version
+
+    - name: Replay the workflow on each candidate
+      id: replay
+      shell: bash
+      env:
+        MANIFEST: ${{ inputs.manifest }}
+        CAPTURE: ${{ inputs.capture }}
+        CANDIDATES: ${{ inputs.candidates }}
+        CHECK_SIGNATURES: ${{ inputs.check-signatures }}
+        OUT: ${{ inputs.out-dir }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$OUT"
+        args=(replay --manifest "$MANIFEST" --capture "$CAPTURE" --out "$OUT/report.json" --fail-on-divergence)
+        while IFS= read -r line; do
+          line="$(echo "$line" | xargs)"
+          [ -n "$line" ] && args+=(--candidate "$line")
+        done <<< "$CANDIDATES"
+        [ "$CHECK_SIGNATURES" = true ] && args+=(--check-signatures)
+        set +e
+        rehearse "${args[@]}"
+        code=$?
+        set -e
+        if [ "$code" -ne 0 ] && [ "$code" -ne 2 ]; then exit "$code"; fi
+        rehearse render --report "$OUT/report.json" --out "$OUT/report.html"
+        {
+          echo "exit-code=$code"
+          echo "diverged=$([ "$code" -eq 2 ] && echo true || echo false)"
+          echo "report-json=$OUT/report.json"
+          echo "report-html=$OUT/report.html"
+        } >> "$GITHUB_OUTPUT"
+        {
+          echo "### Rehearse: proposed upgrade"
+          echo
+          jq -r --argjson n "$(jq '.manifest.steps | length' "$OUT/report.json")" \
+            '.summary[] | "**\(.candidate)**: \(.status) (\(.step_differences) of \($n) results changed)"' "$OUT/report.json"
+          echo
+          jq -r '
+            def cell: tostring | gsub("\\|"; "\\|") | "`\(.)`";
+            .baseline.steps as $b | .candidates as $c
+            | "| Step | Deployed | \([$c[].label] | join(" | ")) |",
+              "|---|---|\([$c[] | "---|"] | join(""))",
+              ($b | to_entries[] | .key as $i
+                | "| \(.value.label) | \(.value.result | cell) | \([$c[] | (.steps[$i].result // "—") as $r
+                    | ($r | cell) + (if $r != $b[$i].result then " ❌" else "" end)] | join(" | ")) |")
+          ' "$OUT/report.json"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload the reports
+      if: always() && inputs.artifact-name != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.out-dir }}/report.json
+          ${{ inputs.out-dir }}/report.html
+        if-no-files-found: ignore
+
+    - name: Fail when an upgrade diverges
+      if: inputs.fail-on-divergence == 'true' && steps.replay.outputs.exit-code == '2'
+      shell: bash
+      run: |
+        echo "::error::Rehearse: at least one candidate changes what the workflow observes. See the job summary and the report artifact."
+        exit 2

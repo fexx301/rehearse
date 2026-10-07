@@ -19,7 +19,7 @@ use soroban_sdk::xdr::{
 use soroban_sdk::{Address, Env, InvokeError, Symbol, TryFromVal, Val};
 use std::{
     cell::RefCell,
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     io::Cursor,
     panic::{catch_unwind, AssertUnwindSafe},
     rc::Rc,
@@ -216,6 +216,24 @@ pub fn error_names(wasm: &[u8]) -> BTreeMap<u32, String> {
         }
     }
     names
+}
+
+/// Function names the Wasm exports, read from its contract spec (None if it has no spec).
+pub fn function_names(wasm: &[u8]) -> Option<BTreeSet<String>> {
+    let spec = custom_section(wasm, "contractspecv0")?;
+    let len = spec.len() as u64;
+    let mut r = Limited::new(Cursor::new(spec), Limits::none());
+    let mut names = BTreeSet::new();
+    while r.inner.position() < len {
+        match ScSpecEntry::read_xdr(&mut r) {
+            Ok(ScSpecEntry::FunctionV0(f)) => {
+                names.insert(f.name.0.to_utf8_string_lossy());
+            }
+            Ok(_) => {}
+            Err(_) => break,
+        }
+    }
+    Some(names)
 }
 
 pub fn custom_section<'a>(wasm: &'a [u8], name: &str) -> Option<&'a [u8]> {

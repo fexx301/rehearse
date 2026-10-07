@@ -79,14 +79,17 @@ docker run --rm --network none rehearse
 
 ## Use it on your contract
 
-Install the CLI (tested with Rust 1.95):
+Install the CLI. Prebuilt binaries for macOS (Apple silicon, Intel) and Linux (x86-64, arm64) are on the [releases page](https://github.com/fexx301/rehearse/releases/latest):
 
 ```sh
-cargo install --git https://github.com/fexx301/rehearse --locked rehearse
-rehearse --help
+# macOS on Apple silicon. Swap in x86_64-apple-darwin, x86_64-unknown-linux-gnu or aarch64-unknown-linux-gnu.
+curl -sSL https://github.com/fexx301/rehearse/releases/latest/download/rehearse-aarch64-apple-darwin.tar.gz | tar xz
+./rehearse-aarch64-apple-darwin/rehearse --help
 ```
 
-Or, from a clone: `cargo build --release --manifest-path cli/Cargo.toml` (the binary lands at `cli/target/release/rehearse`).
+Each archive has a `.sha256` next to it. The binaries are not code-signed; downloading with `curl` as above avoids macOS's quarantine prompt.
+
+Or build from source (tested with Rust 1.95): `cargo install --git https://github.com/fexx301/rehearse --locked rehearse`, or `cargo build --release --manifest-path cli/Cargo.toml` from a clone.
 
 Write a manifest listing the calls that matter to your holders, in order. Arguments are typed. `expect` is optional and is checked against the deployed code. `display` is optional and only affects how amounts are formatted.
 
@@ -135,7 +138,22 @@ rehearse render --report report.json --out report.html
 
 ### In CI
 
-`replay --fail-on-divergence` exits **2** when any candidate differs from the deployed contract (or reads state outside the capture), **0** when none do, and **1** on errors. [`.github/workflows/upgrade-check.yml`](.github/workflows/upgrade-check.yml) uses it to block a pull request whose proposed upgrade, `demo/upgrade/candidate.wasm`, changes what the workflow observes. It writes a per-step table to the job summary and attaches the HTML report. To use it in your own repo, copy the file and point it at your manifest, committed capture and built Wasm.
+Add the upgrade check to a workflow with the action in this repo:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: fexx301/rehearse@v0.1.0
+  with:
+    manifest: manifest.json
+    capture: capture                 # committed output of `rehearse capture`
+    candidates: |
+      proposed=target/wasm32v1-none/release/my_contract.wasm
+    # check-signatures: 'true'
+```
+
+It downloads the prebuilt CLI, replays the workflow on each candidate, writes a per-call table to the job summary, uploads `report.json` and `report.html`, and fails the job when any candidate differs from the deployed contract. Set `fail-on-divergence: 'false'` to report without failing; the `exit-code` and `diverged` outputs carry the result. Linux and macOS runners use the prebuilt binary; other runners build it from source.
+
+Under the hood, `replay --fail-on-divergence` exits **2** when any candidate differs from the deployed contract (or reads state outside the capture), **0** when none do, and **1** on errors. [`.github/workflows/upgrade-check.yml`](.github/workflows/upgrade-check.yml) uses it to block a pull request whose proposed upgrade, `demo/upgrade/candidate.wasm`, changes what the workflow observes. It writes a per-step table to the job summary and attaches the HTML report. It builds the CLI from source, so it also checks this repo's own code.
 
 ### How capture decides what to save
 
@@ -176,7 +194,8 @@ demo/upgrade/     the proposed upgrade the pull-request check replays
 examples/         the authorization, event and upgrade-path checks, and real-world runs (Blend's lending pool on testnet and mainnet)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
-.github/          CI (reproduction + exit codes) and the pull-request upgrade check
+.github/          CI (reproduction + exit codes), the pull-request upgrade check, and the release build
+action.yml        the reusable GitHub Action
 GATES.md          validation log: what was tested, how, and the results
 ```
 

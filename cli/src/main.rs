@@ -131,6 +131,15 @@ fn replay_cmd(a: Args) -> Result<(), String> {
     if a.candidates.is_empty() {
         return Err("at least one --candidate is required".into());
     }
+    if !dir.is_dir() {
+        return Err(format!("no capture at {}: run `rehearse capture --out {}` first", dir.display(), dir.display()));
+    }
+    if !dir.join("provenance.json").is_file() {
+        return Err(format!(
+            "{} is not a capture (no provenance.json): point --capture at the folder `rehearse capture --out` wrote",
+            dir.display()
+        ));
+    }
     let provenance: Value = serde_json::from_slice(
         &fs::read(dir.join("provenance.json")).map_err(|e| format!("read provenance: {e}"))?,
     )
@@ -140,7 +149,11 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         return Err("snapshot.json does not match the SHA-256 recorded in provenance.json".into());
     }
     if provenance["contract"].as_str() != Some(manifest.contract.as_str()) {
-        return Err("manifest contract differs from the captured contract".into());
+        return Err(format!(
+            "the manifest's contract {} is not the one in this capture ({}): capture again with this manifest",
+            manifest.contract,
+            provenance["contract"].as_str().unwrap_or("unknown")
+        ));
     }
     let snap = LedgerSnapshot::read_file(dir.join("snapshot.json")).map_err(|e| format!("load snapshot: {e}"))?;
     let verified_absent: BTreeSet<String> = provenance["keys_verified_absent_xdr"]
@@ -149,9 +162,29 @@ fn replay_cmd(a: Args) -> Result<(), String> {
         .flatten()
         .filter_map(|v| v.as_str().map(String::from))
         .collect();
-    soroban_sdk::xdr::ScAddress::from_str_checked(&manifest.contract)?; // fail early on a bad address
+    let contract = soroban_sdk::xdr::ScAddress::from_str_checked(&manifest.contract)?; // fail early on a bad address
+    // A misspelled call fails identically on every version, which would read as "no observed difference".
+    if let Some(exported) = replay::deployed_wasm(&snap, &contract).ok().as_deref().and_then(replay::function_names) {
+        if let Some(step) = manifest.steps.iter().find(|s| !exported.contains(&s.call)) {
+            let public: Vec<&str> = exported.iter().map(String::as_str).filter(|n| !n.starts_with("__")).collect();
+            return Err(format!(
+                "step \"{}\" calls `{}`, which the deployed contract doesn't export. It exports: {}",
+                step.label,
+                step.call,
+                public.join(", ")
+            ));
+        }
+    }
 
     let baseline = replay::run(snap.clone(), &manifest, "baseline (deployed)")?;
+    for (i, s) in baseline.steps.iter().enumerate().filter(|(_, s)| s.failed) {
+        eprintln!(
+            "note: step {} \"{}\" fails on the deployed contract too ({}). Fine if you expect it to; otherwise check its arguments.",
+            i + 1,
+            s.label,
+            s.result.trim_start_matches("error: ")
+        );
+    }
     let mut candidates = Vec::new();
     let wasms = read_candidates(&a.candidates)?;
     for (label, wasm) in &wasms {

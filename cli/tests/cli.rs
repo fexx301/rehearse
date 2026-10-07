@@ -107,3 +107,48 @@ fn a_compatible_candidate_passes_with_signatures_checked() {
     assert_eq!(code, Some(0));
     assert_eq!(r["candidates"][0]["status"], "no observed difference");
 }
+
+fn replay_error(manifest: &std::path::Path, capture: &std::path::Path) -> (Option<i32>, String) {
+    let out = bin()
+        .args(["replay", "--manifest"]).arg(manifest)
+        .arg("--capture").arg(capture)
+        .arg("--candidate").arg(format!("v2={}", repo("demo/wasm/token-v2-compatible.wasm").display()))
+        .arg("--out").arg(std::env::temp_dir().join(format!("rehearse-cli-{}-err.json", std::process::id())))
+        .output()
+        .unwrap();
+    (out.status.code(), String::from_utf8_lossy(&out.stderr).into_owned())
+}
+
+#[test]
+fn a_missing_capture_says_how_to_make_one() {
+    let (code, err) = replay_error(&repo("demo/manifest.json"), &repo("no-such-capture"));
+    assert_eq!(code, Some(1));
+    assert!(err.contains("run `rehearse capture --out"), "{err}");
+    let (code, err) = replay_error(&repo("demo/manifest.json"), &repo("demo"));
+    assert_eq!(code, Some(1));
+    assert!(err.contains("is not a capture"), "{err}");
+}
+
+#[test]
+fn a_misspelled_call_is_an_error_not_a_clean_report() {
+    let mut m: serde_json::Value = serde_json::from_slice(&std::fs::read(repo("demo/manifest.json")).unwrap()).unwrap();
+    m["steps"][0]["call"] = "balanse".into();
+    let path = std::env::temp_dir().join(format!("rehearse-cli-{}-typo.json", std::process::id()));
+    std::fs::write(&path, serde_json::to_vec(&m).unwrap()).unwrap();
+    let (code, err) = replay_error(&path, &repo("demo/capture"));
+    assert_eq!(code, Some(1));
+    assert!(err.contains("calls `balanse`, which the deployed contract doesn't export"), "{err}");
+    assert!(err.contains("balance"), "{err}");
+}
+
+#[test]
+fn a_manifest_for_another_contract_names_both() {
+    let mut m: serde_json::Value = serde_json::from_slice(&std::fs::read(repo("demo/manifest.json")).unwrap()).unwrap();
+    let other: serde_json::Value = serde_json::from_slice(&std::fs::read(repo("examples/events/manifest.json")).unwrap()).unwrap();
+    m["contract"] = other["contract"].clone();
+    let path = std::env::temp_dir().join(format!("rehearse-cli-{}-other.json", std::process::id()));
+    std::fs::write(&path, serde_json::to_vec(&m).unwrap()).unwrap();
+    let (code, err) = replay_error(&path, &repo("demo/capture"));
+    assert_eq!(code, Some(1));
+    assert!(err.contains(other["contract"].as_str().unwrap()) && err.contains("capture again"), "{err}");
+}
