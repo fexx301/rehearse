@@ -1,0 +1,302 @@
+{
+  "baseline": {
+    "expectation_failures": [],
+    "label": "baseline (deployed)",
+    "reads_outside_capture": [],
+    "status": "ok",
+    "steps": [
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder A balance",
+        "result": "12400000000"
+      },
+      {
+        "args": [
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder B balance",
+        "result": "5000000000"
+      },
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+          "1000000000"
+        ],
+        "call": "transfer",
+        "failed": false,
+        "label": "A sends 100 RHD to B",
+        "result": "()"
+      },
+      {
+        "args": [
+          "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder A balance after",
+        "result": "11400000000"
+      },
+      {
+        "args": [
+          "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        ],
+        "call": "balance",
+        "failed": false,
+        "label": "holder B balance after",
+        "result": "6000000000"
+      }
+    ],
+    "wasm_sha256": "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5"
+  },
+  "candidates": [
+    {
+      "label": "v2-compatible",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "no observed difference",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance",
+          "result": "12400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance",
+          "result": "5000000000"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+            "1000000000"
+          ],
+          "call": "transfer",
+          "failed": false,
+          "label": "A sends 100 RHD to B",
+          "result": "()"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance after",
+          "result": "11400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance after",
+          "result": "6000000000"
+        }
+      ],
+      "wasm_sha256": "fe2fef8246ad2104f58b88299c48c1d89f75714257fec49062cc59452525d879"
+    },
+    {
+      "auth_differences": [
+        {
+          "baseline": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 authorizes CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI.transfer(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3, GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI, 1000000000)"
+          ],
+          "candidate": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 authorizes CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI.transfer(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)"
+          ],
+          "label": "A sends 100 RHD to B",
+          "step": 3
+        }
+      ],
+      "label": "v2-authscope",
+      "reads_absent_on_chain": [],
+      "reads_outside_capture": [],
+      "state_differences": [],
+      "status": "diverged",
+      "step_differences": [],
+      "steps": [
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance",
+          "result": "12400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance",
+          "result": "5000000000"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI",
+            "1000000000"
+          ],
+          "call": "transfer",
+          "failed": false,
+          "label": "A sends 100 RHD to B",
+          "result": "()"
+        },
+        {
+          "args": [
+            "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder A balance after",
+          "result": "11400000000"
+        },
+        {
+          "args": [
+            "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          ],
+          "call": "balance",
+          "failed": false,
+          "label": "holder B balance after",
+          "result": "6000000000"
+        }
+      ],
+      "wasm_sha256": "a288e69321d6b63ebe019383099c32ccd51dcf1332e4329e6d974379839d3c94"
+    }
+  ],
+  "capture": {
+    "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+    "deployed_wasm_sha256": "d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+    "keys_captured": [
+      "code d42b3a62cbe65aede4271a0fa4c9c3f972a4ce372f168e01ec41a8017bf380b5",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent Balance(GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI)",
+      "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI persistent instance"
+    ],
+    "keys_verified_absent": [
+      "account GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3",
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 801925984706572462 })",
+      "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3 temporary LedgerKeyNonce(ScNonceKey { nonce: 8505573377549415299 })"
+    ],
+    "ledger": 5070573,
+    "ledger_close_time": 1791376452,
+    "network": "testnet",
+    "protocol": 29,
+    "snapshot_sha256": "9fa8bd31c4c415f83cd121593039ea6881db57858bbee87883fe57ea2b1a2d23"
+  },
+  "claim": "Observed differences for the listed calls on the captured state. Not a safety certification.",
+  "manifest": {
+    "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+    "description": "Authorization check on the demo token: read two holders, move 100 RHD from A to B, read again. Compares who must authorize what, not just results.",
+    "display": {
+      "amount_calls": [
+        "balance"
+      ],
+      "decimals": 7,
+      "symbol": "RHD"
+    },
+    "network": "testnet",
+    "rpc": "https://soroban-testnet.stellar.org",
+    "steps": [
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          }
+        ],
+        "call": "balance",
+        "expect": "12400000000",
+        "label": "holder A balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          }
+        ],
+        "call": "balance",
+        "expect": "5000000000",
+        "label": "holder B balance"
+      },
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          },
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          },
+          {
+            "i128": "1000000000"
+          }
+        ],
+        "call": "transfer",
+        "expect": "()",
+        "label": "A sends 100 RHD to B"
+      },
+      {
+        "args": [
+          {
+            "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+          }
+        ],
+        "call": "balance",
+        "expect": "11400000000",
+        "label": "holder A balance after"
+      },
+      {
+        "args": [
+          {
+            "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+          }
+        ],
+        "call": "balance",
+        "expect": "6000000000",
+        "label": "holder B balance after"
+      }
+    ]
+  },
+  "runtime": {
+    "auth_mocked": true,
+    "network_calls_during_replay": false,
+    "soroban_env_host": "28.0.2 with experimental `next` feature",
+    "soroban_sdk": "28.0.0"
+  },
+  "summary": [
+    {
+      "candidate": "v2-compatible",
+      "state_differences": 0,
+      "status": "no observed difference",
+      "step_differences": 0
+    },
+    {
+      "auth_differences": 1,
+      "candidate": "v2-authscope",
+      "state_differences": 0,
+      "status": "diverged",
+      "step_differences": 0
+    }
+  ],
+  "tool": "rehearse 0.1.0"
+}

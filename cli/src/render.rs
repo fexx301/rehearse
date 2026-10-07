@@ -220,6 +220,15 @@ footer p { margin: 0; max-width: 80ch; }
 @media print { .band { background: none; color: black; } .scroll { overflow: visible; } }
 "#;
 
+/// Styles for the authorization and event sections. Emitted only in reports that have them,
+/// so reports without them keep their exact bytes.
+const EXTRA_CSS: &str = r#"<style>
+table.changes td { font: 500 var(--text-xs)/1.6 var(--font-mono); overflow-wrap: anywhere; vertical-align: top; }
+table.changes td ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-xs); }
+table.changes td .none { color: var(--color-muted); font-family: var(--font-body); }
+table.changes td.diff { font-weight: 600; }
+</style>"#;
+
 fn esc(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
@@ -385,12 +394,13 @@ pub fn render(report: &Value) -> String {
     let base_short = short_label(s(base, "label"));
     let has_figure = units.as_ref().is_some_and(|u| steps.first().is_some_and(|st| u.calls.iter().any(|c| c == s(st, "call"))));
 
+    let has_auth_or_events = cands.iter().any(|c| !arr(&c["auth_differences"]).is_empty() || !arr(&c["event_differences"]).is_empty());
     let mut h = String::new();
     let _ = write!(h, r#"<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>Rehearse report for {contract_short}</title>
-<style>{CSS}</style></head><body>
+<style>{CSS}</style>{EXTRA}</head><body>
 <div class="band"><div class="wrap">
 <header class="bar"><span class="wordmark">rehearse<span>.</span></span>
 <span>contract <b title="{contract}">{contract_short}</b></span><span>{network} ledger <b>{ledger_fmt}</b></span><span>protocol <b>{protocol}</b></span></header>
@@ -401,13 +411,23 @@ pub fn render(report: &Value) -> String {
         network = esc(s(cap, "network")),
         protocol = cap["protocol"],
         solo = if has_figure { "" } else { " solo" },
+        EXTRA = if has_auth_or_events { EXTRA_CSS } else { "" },
     );
 
     match diverged.as_slice() {
         [] => h.push_str(r#"<h1>No candidate changes what this workflow sees.</h1>"#),
         [one] => {
-            let _ = write!(h, r#"<h1>Upgrading to <span class="who">{}</span> changes <span class="nw">{} of {} results.</span></h1>"#,
-                esc(s(one, "label")), arr(&one["step_differences"]).len(), n_steps);
+            let (n, a, e) = (arr(&one["step_differences"]).len(), arr(&one["auth_differences"]).len(), arr(&one["event_differences"]).len());
+            // Only the count stays on one line; the lead-in may wrap.
+            let (lead, count) = if n > 0 || (a == 0 && e == 0) {
+                (String::new(), format!("{n} of {n_steps} results"))
+            } else if a > 0 {
+                ("who must authorize ".to_string(), format!("{a} of {n_steps} calls"))
+            } else {
+                ("the events of ".to_string(), format!("{e} of {n_steps} calls"))
+            };
+            let _ = write!(h, r#"<h1>Upgrading to <span class="who">{}</span> changes {}<span class="nw">{}.</span></h1>"#,
+                esc(s(one, "label")), esc(&lead), esc(&count));
         }
         many => {
             let _ = write!(h, r#"<h1><span class="who">{} of {}</span> candidates change what this workflow sees.</h1>"#, many.len(), cands.len());
@@ -421,9 +441,18 @@ pub fn render(report: &Value) -> String {
     for c in cands {
         let n = arr(&c["step_differences"]).len();
         let unverified = s(c, "status").starts_with("unverified");
-        let class = if n > 0 || unverified { "bad" } else { "ok" };
-        let word = if unverified { "unverified reads".to_string() } else { format!("of {n_steps} results changed") };
-        let _ = write!(h, r#"<div class="{class}"><dt>{}</dt><dd><strong>{n}</strong>{word}</dd></div>"#, esc(s(c, "label")));
+        let (a, e) = (arr(&c["auth_differences"]).len(), arr(&c["event_differences"]).len());
+        let class = if n > 0 || a > 0 || e > 0 || unverified { "bad" } else { "ok" };
+        let (shown, word) = if unverified {
+            (n, "unverified reads".to_string())
+        } else if n == 0 && a > 0 {
+            (a, format!("of {n_steps} calls changed who must authorize"))
+        } else if n == 0 && e > 0 {
+            (e, format!("of {n_steps} calls changed their events"))
+        } else {
+            (n, format!("of {n_steps} results changed"))
+        };
+        let _ = write!(h, r#"<div class="{class}"><dt>{}</dt><dd><strong>{shown}</strong>{word}</dd></div>"#, esc(s(c, "label")));
     }
     h.push_str("</dl>");
     if !has_figure {
@@ -540,7 +569,7 @@ pub fn render(report: &Value) -> String {
         .filter_map(|k| k.as_str())
         .filter(|k| k.contains(" persistent ") && !k.ends_with(" instance"))
         .collect();
-    for c in &diverged {
+    for c in diverged.iter().filter(|c| !arr(&c["state_differences"]).is_empty() || !arr(&c["reads_absent_on_chain"]).is_empty()) {
         let label = s(c, "label");
         let mut absent: Vec<&str> = arr(&c["reads_absent_on_chain"]).iter().filter_map(|k| k.as_str()).collect();
         absent.sort_by_key(|k| key_arg(k).to_string());
@@ -595,6 +624,28 @@ pub fn render(report: &Value) -> String {
             h.push_str("</tbody></table></div></div>\n");
         }
         h.push_str("</section>\n");
+    }
+
+    // Authorization and event changes, compared on calls where both versions succeeded.
+    for (key, title, lede, empty) in [
+        ("auth_differences", "Who must authorize", "Authorizations each call required, recorded while signatures are mocked. Compared where both versions succeeded.", "No authorization required"),
+        ("event_differences", "Events emitted", "Contract events each call emitted. Compared where both versions succeeded.", "No events"),
+    ] {
+        for c in cands.iter().filter(|c| !arr(&c[key]).is_empty()) {
+            let label = s(c, "label");
+            let _ = write!(h, r#"<section aria-labelledby="{key}-{id}"><div class="head"><h2 id="{key}-{id}">{title}: {l}</h2><p>{lede}</p></div>
+<div class="scroll"><table class="stack changes"><colgroup><col class="call"><col><col></colgroup><thead><tr><th scope="col">Call</th><th scope="col">{b}</th><th scope="col">{l}</th></tr></thead><tbody>
+"#, id = esc(label), l = esc(label), b = esc(base_short));
+            let list = |v: &Value| -> String {
+                let items: Vec<String> = arr(v).iter().filter_map(|x| x.as_str()).map(|x| format!("<li>{}</li>", esc(&short_keys(x)))).collect();
+                if items.is_empty() { format!(r#"<span class="none">{empty}</span>"#) } else { format!("<ul>{}</ul>", items.join("")) }
+            };
+            for d in arr(&c[key]) {
+                let _ = write!(h, r#"<tr><th scope="row">{}<small>step {}</small></th><td data-v="{}">{}</td><td class="diff" data-v="{}">{}</td></tr>
+"#, esc(&sentence(s(d, "label"))), d["step"], esc(base_short), list(&d["baseline"]), esc(label), list(&d["candidate"]));
+            }
+            h.push_str("</tbody></table></div></section>\n");
+        }
     }
 
     // Coverage.

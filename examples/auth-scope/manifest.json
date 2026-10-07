@@ -1,0 +1,71 @@
+{
+  "description": "Authorization check on the demo token: read two holders, move 100 RHD from A to B, read again. Compares who must authorize what, not just results.",
+  "network": "testnet",
+  "rpc": "https://soroban-testnet.stellar.org",
+  "contract": "CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI",
+  "display": {
+    "decimals": 7,
+    "symbol": "RHD",
+    "amount_calls": [
+      "balance"
+    ]
+  },
+  "steps": [
+    {
+      "label": "holder A balance",
+      "call": "balance",
+      "args": [
+        {
+          "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        }
+      ],
+      "expect": "12400000000"
+    },
+    {
+      "label": "holder B balance",
+      "call": "balance",
+      "args": [
+        {
+          "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        }
+      ],
+      "expect": "5000000000"
+    },
+    {
+      "label": "A sends 100 RHD to B",
+      "call": "transfer",
+      "args": [
+        {
+          "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        },
+        {
+          "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        },
+        {
+          "i128": "1000000000"
+        }
+      ],
+      "expect": "()"
+    },
+    {
+      "label": "holder A balance after",
+      "call": "balance",
+      "args": [
+        {
+          "address": "GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3"
+        }
+      ],
+      "expect": "11400000000"
+    },
+    {
+      "label": "holder B balance after",
+      "call": "balance",
+      "args": [
+        {
+          "address": "GAA4S5N72PZFRKUUNNA2RZM6P73FLJTTVBBF7NVKVQTUSXYXYVFKPJGI"
+        }
+      ],
+      "expect": "6000000000"
+    }
+  ]
+}

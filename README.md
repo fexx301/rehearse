@@ -4,7 +4,7 @@
 
 Replay a Stellar smart contract's real workflow against candidate Wasm, on ledger state captured from the network, before you upgrade.
 
-**See it:** [live demo report](https://fexx301.github.io/rehearse/demo/report.html) · [a pull request blocked by the upgrade check](https://github.com/fexx301/rehearse/pull/1) · [a read-only run on Blend's lending pool on mainnet](https://fexx301.github.io/rehearse/examples/blend-pool-mainnet/report.html)
+**See it:** [live demo report](https://fexx301.github.io/rehearse/demo/report.html) · [a pull request blocked by the upgrade check](https://github.com/fexx301/rehearse/pull/1) · [a signature that stops covering the amount](https://fexx301.github.io/rehearse/examples/auth-scope/report.html) · [a read-only run on Blend's lending pool on mainnet](https://fexx301.github.io/rehearse/examples/blend-pool-mainnet/report.html)
 
 ![Rehearse report: upgrading to v2-broken changes 7 of 8 results](docs/report-hero.png)
 
@@ -32,6 +32,19 @@ The broken build gets past the checks most teams run before an upgrade. Its test
 One caveat: the variant names still appear as plain strings in the Wasm data section. The rename is invisible to a spec diff, not to every possible static check.
 
 Full report: [live](https://fexx301.github.io/rehearse/demo/report.html), or [`demo/report.html`](demo/report.html) in the repo.
+
+## Who must authorize what
+
+Results are not the only thing an upgrade can change. In [`examples/auth-scope`](examples/auth-scope) ([live report](https://fexx301.github.io/rehearse/examples/auth-scope/report.html)), the candidate changes one line of `transfer`, from `from.require_auth()` to `from.require_auth_for_args((to,))`. The sender still authorizes the transfer and the recipient, but the signature no longer covers the amount. The candidate passes all 8 tests in the shared suite, keeps a byte-identical spec, and returns exactly the same results.
+
+Rehearse flags it anyway. During replay it records every authorization each call requires (address, function, exact arguments, nested calls) and compares them between versions:
+
+| Version | "A sends 100 RHD to B" requires |
+|---|---|
+| deployed | `GA5U… authorizes transfer(GA5U…, GAA4…, 1000000000)` |
+| v2-authscope | `GA5U… authorizes transfer(GAA4…)` |
+
+Contract events are compared the same way, on every call where both versions succeed.
 
 ## On a contract we didn't write
 
@@ -119,9 +132,9 @@ So when a candidate reads a value, it is either real captured state or a key con
 ## Scope and limits
 
 - **Runtime.** `soroban-sdk` 28.0.0 and `soroban-env-host` 28.0.2 with the experimental `next` feature, which runs protocol-29 state. This is close to production behaviour but not exact protocol-29 parity. Tested with contracts built by soroban-sdk 28. State-archival settings in the snapshot use SDK defaults, not the network's.
-- **Authorization is mocked.** Every `require_auth` is satisfied and signatures are not checked, so the report says nothing about authorization behaviour.
+- **Signatures are not checked.** Replay holds nobody's keys, so every `require_auth` is satisfied. What each call *requires* (address, function, arguments) is still recorded and compared. Signatures themselves, and custom account logic (`__check_auth`), are not run.
 - **Code replacement, not the upgrade path.** The candidate is installed directly under the contract address. Your contract's own `upgrade` entrypoint and any migration logic are not exercised.
-- **Only what you list.** Calls not in the manifest, events, and fee and resource costs are not compared.
+- **Only what you list.** Calls not in the manifest, and fee and resource costs, are not compared.
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
 - **One ledger.** A capture is a point-in-time copy. Recapture before relying on an old report.
 - **Up to 200 keys per capture.** Every key is fetched in one `getLedgerEntries` call, so that all of them come from the same ledger. A workflow touching more than 200 ledger entries stops with an error rather than mixing ledgers.
@@ -139,12 +152,12 @@ Rehearse builds on ideas that already exist, and credits them:
 
 ```
 cli/              the rehearse CLI (capture, replay, render)
-demo/contracts/   token v1, v2-compatible and v2-broken, with one shared test suite
-demo/wasm/        the three built Wasm files
+demo/contracts/   token v1 and three candidates (compatible, broken, authscope), with one shared test suite
+demo/wasm/        the built Wasm files
 demo/capture/     captured testnet snapshot and provenance (ledger 5,056,347)
 demo/report.*     the demo report, as JSON and HTML
 demo/upgrade/     the proposed upgrade the pull-request check replays
-examples/         real-world runs (Blend's lending pool on testnet and mainnet)
+examples/         the authorization check, and real-world runs (Blend's lending pool on testnet and mainnet)
 reproduce.sh      offline, byte-for-byte reproduction check
 Dockerfile        the same check on a clean machine
 .github/          CI (reproduction + exit codes) and the pull-request upgrade check

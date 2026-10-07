@@ -1321,6 +1321,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rehearse-demo-token-v2-authscope"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "rehearse-demo-token-v2-broken"
 version = "0.0.0"
 dependencies = [

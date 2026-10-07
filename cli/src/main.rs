@@ -197,16 +197,42 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             .filter(|k| baseline.final_state.get(*k) != c.final_state.get(*k))
             .map(|k| json!({"key": k, "baseline": baseline.final_state.get(k), "candidate": c.final_state.get(k)}))
             .collect();
+        // Who must authorize, and what each call emits, are compared only where both versions
+        // succeeded: a failed call is already a result difference.
+        let both_ok = |b: &replay::StepResult, x: &replay::StepResult| !b.failed && !x.failed;
+        let auth_diffs: Vec<Value> = baseline
+            .steps
+            .iter()
+            .zip(&c.steps)
+            .enumerate()
+            .filter(|(_, (b, x))| both_ok(b, x) && b.auths != x.auths)
+            .map(|(i, (b, x))| json!({"step": i + 1, "label": b.label, "baseline": b.auths, "candidate": x.auths}))
+            .collect();
+        let event_diffs: Vec<Value> = baseline
+            .steps
+            .iter()
+            .zip(&c.steps)
+            .enumerate()
+            .filter(|(_, (b, x))| both_ok(b, x) && b.events != x.events)
+            .map(|(i, (b, x))| json!({"step": i + 1, "label": b.label, "baseline": b.events, "candidate": x.events}))
+            .collect();
         let outside = uncaptured(c);
-        let status = if !step_diffs.is_empty() || !state_diffs.is_empty() {
+        let status = if !step_diffs.is_empty() || !state_diffs.is_empty() || !auth_diffs.is_empty() || !event_diffs.is_empty() {
             "diverged"
         } else if !outside.is_empty() {
             "unverified: read state outside the capture"
         } else {
             "no observed difference"
         };
-        summary.push(json!({"candidate": c.label, "status": status, "step_differences": step_diffs.len(), "state_differences": state_diffs.len()}));
-        candidate_reports.push(json!({
+        let mut sum = json!({"candidate": c.label, "status": status, "step_differences": step_diffs.len(), "state_differences": state_diffs.len()});
+        if !auth_diffs.is_empty() {
+            sum["auth_differences"] = json!(auth_diffs.len());
+        }
+        if !event_diffs.is_empty() {
+            sum["event_differences"] = json!(event_diffs.len());
+        }
+        summary.push(sum);
+        let mut cand = json!({
             "label": c.label,
             "wasm_sha256": c.wasm_sha256,
             "status": status,
@@ -215,7 +241,16 @@ fn replay_cmd(a: Args) -> Result<(), String> {
             "state_differences": state_diffs,
             "reads_outside_capture": outside,
             "reads_absent_on_chain": absent_only(c),
-        }));
+        });
+        // New keys appear only when there is something to show, so reports without
+        // authorization or event changes keep their exact bytes.
+        if !auth_diffs.is_empty() {
+            cand["auth_differences"] = json!(auth_diffs);
+        }
+        if !event_diffs.is_empty() {
+            cand["event_differences"] = json!(event_diffs);
+        }
+        candidate_reports.push(cand);
     }
 
     let report = json!({
