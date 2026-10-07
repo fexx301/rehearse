@@ -61,3 +61,31 @@ fn account_strkey(id: &soroban_sdk::xdr::AccountId) -> String {
 pub fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::xdr::{Int128Parts, ScSymbol, ScVec, StringM};
+    use std::str::FromStr;
+
+    fn sym(s: &str) -> ScVal {
+        ScVal::Symbol(ScSymbol(StringM::try_from(s.as_bytes().to_vec()).unwrap()))
+    }
+
+    #[test]
+    fn i128_extremes_render_exactly() {
+        let max = ScVal::I128(Int128Parts { hi: i64::MAX, lo: u64::MAX });
+        let min = ScVal::I128(Int128Parts { hi: i64::MIN, lo: 0 });
+        assert_eq!(scval(&max), "170141183460469231731687303715884105727");
+        assert_eq!(scval(&min), "-170141183460469231731687303715884105728");
+    }
+
+    #[test]
+    fn enum_style_keys_read_like_rust() {
+        let holder = soroban_sdk::xdr::ScAddress::from_str("GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3").unwrap();
+        let key = ScVal::Vec(Some(ScVec(vec![sym("Balance"), ScVal::Address(holder)].try_into().unwrap())));
+        assert_eq!(scval(&key), "Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)");
+        let unit = ScVal::Vec(Some(ScVec(vec![sym("Admin")].try_into().unwrap())));
+        assert_eq!(scval(&unit), "Admin");
+    }
+}

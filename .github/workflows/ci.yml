@@ -14,7 +14,13 @@ jobs:
         run: rustup toolchain install 1.95.0 --profile minimal && rustup default 1.95.0
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: cli
+          workspaces: |
+            cli
+            demo/contracts
+      - name: CLI unit and integration tests
+        run: cargo test --locked --manifest-path cli/Cargo.toml
+      - name: Demo contract tests (all three builds share one suite)
+        run: cargo test --locked --manifest-path demo/contracts/Cargo.toml
       - name: Reproduce the demo report byte for byte
         run: ./reproduce.sh
       - name: Exit codes for --fail-on-divergence

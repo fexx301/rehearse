@@ -276,3 +276,44 @@ pub fn run(snap: LedgerSnapshot, manifest: &Manifest, label: &str) -> Result<Bra
     let misses = source.misses.borrow().clone();
     Ok(Branch { label: label.into(), wasm_sha256: sha256_hex(&wasm), steps, final_state, misses })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn demo(path: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../demo").join(path)
+    }
+
+    #[test]
+    fn contract_errors_are_named_from_the_wasm_spec() {
+        let wasm = std::fs::read(demo("wasm/token-v1.wasm")).unwrap();
+        assert!(custom_section(&wasm, "contractspecv0").is_some());
+        assert!(custom_section(&wasm, "no-such-section").is_none());
+        let names = error_names(&wasm);
+        assert_eq!(names.get(&1).map(String::as_str), Some("InvalidAmount"));
+        assert_eq!(names.get(&2).map(String::as_str), Some("InsufficientBalance"));
+        assert!(custom_section(b"not wasm", "contractspecv0").is_none());
+    }
+
+    #[test]
+    fn demo_capture_replays_to_the_committed_result() {
+        let manifest = Manifest::load(&demo("manifest.json")).unwrap();
+        let snap = LedgerSnapshot::read_file(demo("capture/snapshot.json")).unwrap();
+        let contract = ScAddress::from_str(&manifest.contract).unwrap();
+
+        let base = run(snap.clone(), &manifest, "baseline").unwrap();
+        assert_eq!(base.steps[0].result, "12400000000");
+        assert_eq!(base.steps[4].result, "()");
+        assert_eq!(base.steps[5].result, "11400000000");
+
+        let broken = std::fs::read(demo("wasm/token-v2-broken.wasm")).unwrap();
+        let cand = run(with_candidate(&snap, &contract, &broken).unwrap(), &manifest, "v2-broken").unwrap();
+        assert_eq!(cand.wasm_sha256, sha256_hex(&broken));
+        assert_eq!(cand.steps[0].result, "0");
+        assert!(cand.steps[4].failed);
+        assert!(cand.steps[4].result.contains("InsufficientBalance"));
+        assert!(cand.misses.values().any(|k| fmt::ledger_key(k).contains("BalanceOf(")));
+    }
+}

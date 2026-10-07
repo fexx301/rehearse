@@ -83,7 +83,7 @@ Write a manifest listing the calls that matter to your holders, in order. Argume
 }
 ```
 
-Supported argument types: `address`, `i128`, `u32`, `string`, `bool`.
+Supported argument types: `address`, `i128`, `u64`, `i64`, `u32`, `string`, `symbol`, `bytes` (hex) and `bool`. Write 64- and 128-bit integers as strings so JSON never rounds them. Vectors, maps and structs are not supported as arguments yet.
 
 Then capture once, and replay as often as you like:
 
@@ -119,6 +119,7 @@ So when a candidate reads a value, it is either real captured state or a key con
 - **Only what you list.** Calls not in the manifest, events, and fee and resource costs are not compared.
 - **Cross-contract calls.** Contracts your workflow calls are captured through the same footprint and execute during replay, but only along the paths these runs took. The demo does not exercise cross-contract calls.
 - **One ledger.** A capture is a point-in-time copy. Recapture before relying on an old report.
+- **Up to 200 keys per capture.** Every key is fetched in one `getLedgerEntries` call, so that all of them come from the same ledger. A workflow touching more than 200 ledger entries stops with an error rather than mixing ledgers.
 - **Testnet only, so far.** Capture has been run against testnet. Mainnet capture uses the same read-only RPC calls and should work, but it is untested.
 
 ## Related tools

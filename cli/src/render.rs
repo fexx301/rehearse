@@ -638,3 +638,42 @@ pub fn render(report: &Value) -> String {
     );
     h
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rhd() -> Option<Units> {
+        Some(Units { decimals: 7, symbol: "RHD".into(), calls: vec!["balance".into()] })
+    }
+
+    #[test]
+    fn only_full_strkeys_are_shortened() {
+        assert_eq!(
+            short_keys("Balance(GA5U3PK2JZAO6O443KOYFDELNZMC6IYAM3HIDMLRS7N5RT2RSERSRAL3)"),
+            "Balance(GA5U…RAL3)"
+        );
+        assert_eq!(short_keys("CCFM7DDZ3DFKKLDJ335J47WDEVZJALLIVNVDJZYXNUB5T75YWZK6XIRI"), "CCFM…XIRI");
+        assert_eq!(short_keys("BalanceOf(short) 12400000000"), "BalanceOf(short) 12400000000");
+    }
+
+    #[test]
+    fn amounts_use_the_manifest_units() {
+        let u = rhd().unwrap();
+        assert_eq!(u.amount("12400000000").unwrap(), "1,240.00 RHD");
+        assert_eq!(u.amount("752500000").unwrap(), "75.25 RHD");
+        assert_eq!(u.amount("1").unwrap(), "0.0000001 RHD");
+        assert_eq!(u.amount("-30000000000").unwrap(), "−3,000.00 RHD");
+        assert!(u.amount("not a number").is_none());
+    }
+
+    #[test]
+    fn results_are_shown_in_reader_terms() {
+        assert_eq!(cell(&rhd(), "balance", "12400000000").0, "1,240.00 RHD");
+        assert_eq!(cell(&rhd(), "decimals", "7").0, "7");
+        assert_eq!(cell(&rhd(), "transfer", "()").0, "ok");
+        let (main, sub) = cell(&rhd(), "transfer", "error: InsufficientBalance (Error(Contract, #2))");
+        assert_eq!(main, "InsufficientBalance");
+        assert_eq!(sub.as_deref(), Some("Error(Contract, #2)"));
+    }
+}

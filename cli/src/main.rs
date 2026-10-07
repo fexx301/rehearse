@@ -15,10 +15,25 @@ use serde_json::{json, Value};
 use soroban_ledger_snapshot::LedgerSnapshot;
 use std::{collections::BTreeSet, fs, path::PathBuf};
 
-const USAGE: &str = "usage:
+const USAGE: &str = concat!(
+    "rehearse ", env!("CARGO_PKG_VERSION"),
+    ": replay a Soroban contract's workflow against candidate Wasm on captured ledger state.
+
+usage:
   rehearse capture --manifest M --source G... --out DIR [--candidate LABEL=WASM]...
   rehearse replay  --manifest M --capture DIR --out REPORT.json --candidate LABEL=WASM... [--fail-on-divergence]
-  rehearse render  --report REPORT.json --out REPORT.html";
+  rehearse render  --report REPORT.json --out REPORT.html
+  rehearse --help | --version
+
+  capture  Simulate the manifest's calls on the network and save every ledger entry they touch,
+           read at one ledger. Read-only: --source is any funded account; nothing is signed.
+           Each --candidate is replayed locally so keys only it reads are captured too.
+  replay   Run the calls offline on the deployed code and on each candidate, each in its own copy
+           of the captured state, and write a JSON report. --fail-on-divergence exits 2 when any
+           candidate differs (0 when none do, 1 on errors).
+  render   Turn a report.json into one self-contained HTML page.
+
+docs: https://github.com/fexx301/rehearse");
 
 struct Args {
     manifest: Option<PathBuf>,
@@ -36,6 +51,10 @@ fn parse(rest: &[String]) -> Result<Args, String> {
     while let Some(flag) = it.next() {
         let mut value = || it.next().cloned().ok_or(format!("{flag} needs a value"));
         match flag.as_str() {
+            "-h" | "--help" => {
+                println!("{USAGE}");
+                std::process::exit(0);
+            }
             "--manifest" => a.manifest = Some(value()?.into()),
             "--source" => a.source = Some(value()?),
             "--out" => a.out = Some(value()?.into()),
@@ -62,6 +81,14 @@ fn read_candidates(list: &[(String, PathBuf)]) -> Result<Vec<(String, Vec<u8>)>,
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let result = match argv.first().map(String::as_str) {
+        Some("-h" | "--help" | "help") => {
+            println!("{USAGE}");
+            return;
+        }
+        Some("-V" | "--version") => {
+            println!("rehearse {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
         Some("capture") => parse(&argv[1..]).and_then(|a| {
             let manifest = Manifest::load(&a.manifest.ok_or("--manifest is required")?)?;
             let candidates = read_candidates(&a.candidates)?;
